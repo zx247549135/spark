@@ -17,6 +17,7 @@ class MURScheduler(
      executorId: String) extends Serializable with Logging {
 
   private val runningTasks = new ConcurrentHashMap[Long, TaskMemoryManager]
+  private val finishedTasks = new ArrayBuffer[Long]()
   private val mursStopTasks = new ArrayBuffer[Long]()
   private val taskBytesRead = new ConcurrentHashMap[Long, Long]
   private val taskMemoryUsage = new ConcurrentHashMap[Long, Long]
@@ -35,6 +36,10 @@ class MURScheduler(
     taskMemoryUsageRates.remove(taskId)
   }
 
+  def registerFinishedTask(taskId: Long): Unit = {
+    finishedTasks += taskId
+  }
+
   def registerStopTask(taskId: Long): Unit = {
     mursStopTasks += taskId
   }
@@ -50,8 +55,10 @@ class MURScheduler(
     val bytesRead =
       if(taskMetrics.inputMetrics.isDefined)
         taskMetrics.inputMetrics.get.bytesRead
-      else
+      else if(taskMetrics.shuffleReadMetrics.isDefined)
         taskMetrics.shuffleReadMetrics.get.totalBytesRead
+      else
+        0L
     val taskMemoryManager = runningTasks.get(taskId)
     val memoryUsage = taskMemoryManager.getMemoryConsumptionForThisTask
     val newMemoryUsageRate = (memoryUsage - taskMemoryUsage.get(taskId)).toDouble /

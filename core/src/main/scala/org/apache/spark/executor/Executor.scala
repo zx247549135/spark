@@ -333,7 +333,7 @@ private[spark] class Executor(
 
       } finally {
         runningTasks.remove(taskId)
-        murScheduler.removeFinishedTask(taskId)
+        murScheduler.registerFinishedTask(taskId)
       }
     }
   }
