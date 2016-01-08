@@ -30,7 +30,7 @@ import scala.util.control.NonFatal
 import org.apache.spark._
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.memory.TaskMemoryManager
-import org.apache.spark.scheduler.{DirectTaskResult, IndirectTaskResult, Task}
+import org.apache.spark.scheduler.{MURScheduler, DirectTaskResult, IndirectTaskResult, Task}
 import org.apache.spark.shuffle.FetchFailedException
 import org.apache.spark.storage.{StorageLevel, TaskResultBlockId}
 import org.apache.spark.util._
@@ -115,6 +115,11 @@ private[spark] class Executor(
 
   startDriverHeartbeater()
 
+  private val mursSampling = ThreadUtils.newDaemonSingleThreadScheduledExecutor("excutor-mursSampling")
+  private val murScheduler = new MURScheduler(executorId)
+
+  startExecutorMURSSampling()
+
   def launchTask(
       context: ExecutorBackend,
       taskId: Long,
@@ -138,6 +143,8 @@ private[spark] class Executor(
     env.metricsSystem.report()
     heartbeater.shutdown()
     heartbeater.awaitTermination(10, TimeUnit.SECONDS)
+    mursSampling.shutdown()
+    mursSampling.awaitTermination(2, TimeUnit.SECONDS)
     threadPool.shutdown()
     if (!isLocal) {
       env.stop()
@@ -186,6 +193,9 @@ private[spark] class Executor(
       execBackend.statusUpdate(taskId, TaskState.RUNNING, EMPTY_BYTE_BUFFER)
       var taskStart: Long = 0
       startGCTime = computeTotalGcTime()
+
+      // when the task is running we add it with it memory manager to the MURS
+      murScheduler.registerTask(taskId, taskMemoryManager)
 
       try {
         val (taskFiles, taskJars, taskBytes) = Task.deserializeWithDependencies(serializedTask)
@@ -323,6 +333,7 @@ private[spark] class Executor(
 
       } finally {
         runningTasks.remove(taskId)
+        murScheduler.removeFinishedTask(taskId)
       }
     }
   }
@@ -468,5 +479,54 @@ private[spark] class Executor(
       override def run(): Unit = Utils.logUncaughtExceptions(reportHeartBeat())
     }
     heartbeater.scheduleAtFixedRate(heartbeatTask, initialDelay, intervalMs, TimeUnit.MILLISECONDS)
+  }
+
+  /**
+   * update the messages of all tasks in the executor, and judge the available of MURS
+   */
+  private def updateMURSMessages(): Unit = {
+    // list of (task id, metrics) to send back to the driver
+    val tasksMetrics = new ArrayBuffer[(Long, TaskMetrics)]()
+    val curGCTime = computeTotalGcTime()
+
+    for (taskRunner <- runningTasks.values().asScala) {
+      if (taskRunner.task != null) {
+        taskRunner.task.metrics.foreach { metrics =>
+          metrics.updateShuffleReadMetrics()
+          metrics.updateInputMetrics()
+          metrics.setJvmGCTime(curGCTime - taskRunner.startGCTime)
+          metrics.updateAccumulators()
+
+          if (isLocal) {
+            // JobProgressListener will hold an reference of it during
+            // onExecutorMetricsUpdate(), then JobProgressListener can not see
+            // the changes of metrics any more, so make a deep copy of it
+            val copiedMetrics = Utils.deserialize[TaskMetrics](Utils.serialize(metrics))
+            tasksMetrics += ((taskRunner.taskId, copiedMetrics))
+          } else {
+            // It will be copied by serialization
+            tasksMetrics += ((taskRunner.taskId, metrics))
+          }
+
+          murScheduler.updateTaskInformation(taskRunner.taskId, metrics)
+        }
+      }
+    }
+  }
+
+  /**
+   * Schedules a thread to sampling for MURS
+   */
+  private def startExecutorMURSSampling(): Unit = {
+    val intervalMs = conf.getTimeAsMs("spark.murs.samplingInterval", "2s")
+
+    // Wait a random interval so the sampling don't end up in sync
+    val initialDelay = intervalMs + (math.random * intervalMs).asInstanceOf[Int]
+
+    val samplingTask = new Runnable() {
+      override def run(): Unit = Utils.logUncaughtExceptions(updateMURSMessages())
+    }
+    mursSampling.scheduleAtFixedRate(samplingTask, initialDelay, intervalMs, TimeUnit.MILLISECONDS)
+
   }
 }
