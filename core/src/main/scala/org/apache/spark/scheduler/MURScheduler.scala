@@ -63,9 +63,15 @@ class MURScheduler(
     val memoryUsage = taskMemoryManager.getMemoryConsumptionForThisTask
     val newMemoryUsageRate = (memoryUsage - taskMemoryUsage.get(taskId)).toDouble /
       (bytesRead - taskBytesRead.get(taskId)).toDouble
-    val memoryUsageRateBuffer = taskMemoryUsageRates.get(taskId)
 
-    taskMemoryUsageRates.replace(taskId, memoryUsageRateBuffer += newMemoryUsageRate)
+    if (taskMemoryUsageRates.containsKey(taskId)) {
+      val memoryUsageRateBuffer = taskMemoryUsageRates.get(taskId)
+      taskMemoryUsageRates.replace(taskId, memoryUsageRateBuffer += newMemoryUsageRate)
+    } else {
+      val memoryUsageRateBuffer = new ArrayBuffer[Double]
+      memoryUsageRateBuffer += newMemoryUsageRate
+      taskMemoryUsageRates.put(taskId, memoryUsageRateBuffer)
+    }
     taskBytesRead.replace(taskId, bytesRead)
     taskMemoryUsage.replace(taskId, memoryUsage)
 
