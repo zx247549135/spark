@@ -64,6 +64,7 @@ class MURScheduler(
     val newMemoryUsageRate = (memoryUsage - taskMemoryUsage.get(taskId)).toDouble /
       (bytesRead - taskBytesRead.get(taskId)).toDouble
 
+    // if the task memory usage rate is first build, it can't be get by the method get().
     if (taskMemoryUsageRates.containsKey(taskId)) {
       val memoryUsageRateBuffer = taskMemoryUsageRates.get(taskId)
       taskMemoryUsageRates.replace(taskId, memoryUsageRateBuffer += newMemoryUsageRate)
@@ -75,7 +76,7 @@ class MURScheduler(
     taskBytesRead.replace(taskId, bytesRead)
     taskMemoryUsage.replace(taskId, memoryUsage)
 
-    logInfo(s"Task $taskId on executor $executorId has memory usage rate $newMemoryUsageRate")
+    logInfo(s"Task $taskId on executor $executorId has bytes read $bytesRead, memory usage $memoryUsage")
   }
 
 
