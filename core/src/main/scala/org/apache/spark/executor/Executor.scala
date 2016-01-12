@@ -513,7 +513,7 @@ private[spark] class Executor(
             tasksMetrics += ((taskRunner.taskId, metrics))
           }
 
-          murScheduler.updateTaskInformation(taskRunner.taskId, metrics)
+          // murScheduler.updateTaskInformation(taskRunner.taskId, metrics)
         }
       }
     }

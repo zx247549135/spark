@@ -71,7 +71,7 @@ private[spark] trait WritablePartitionedPairCollection[K, V] {
     val taskMURS = context.taskMURS()
     new WritablePartitionedIterator {
       private[this] var cur = if (it.hasNext) it.next() else null
-      private[this] var sizeTrackForMURSSample = new SizeTrackingVector[((Int, K), V)]
+      private[this] var sizeTrackForMURSSample = new SizeTrackingVector[Any]
 
       override def writeNext(writer: DiskBlockObjectWriter): Unit = {
         writer.write(cur._1, cur._2)
