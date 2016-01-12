@@ -23,7 +23,7 @@ import java.nio.ByteBuffer
 import scala.collection.mutable.HashMap
 
 import org.apache.spark.metrics.MetricsSystem
-import org.apache.spark.{Accumulator, SparkEnv, TaskContextImpl, TaskContext}
+import org.apache.spark._
 import org.apache.spark.executor.TaskMetrics
 import org.apache.spark.memory.TaskMemoryManager
 import org.apache.spark.serializer.SerializerInstance
@@ -69,7 +69,7 @@ private[spark] abstract class Task[T](
     attemptNumber: Int,
     metricsSystem: MetricsSystem)
   : (T, AccumulatorUpdates) = {
-    context = new TaskContextImpl(
+    context = new TaskContextMURSImpl(
       stageId,
       partitionId,
       taskAttemptId,
@@ -77,6 +77,7 @@ private[spark] abstract class Task[T](
       taskMemoryManager,
       metricsSystem,
       internalAccumulators,
+      taskMURS,
       runningLocally = false)
     TaskContext.setTaskContext(context)
     context.taskMetrics.setHostname(Utils.localHostName())
@@ -110,6 +111,12 @@ private[spark] abstract class Task[T](
 
   def setTaskMemoryManager(taskMemoryManager: TaskMemoryManager): Unit = {
     this.taskMemoryManager = taskMemoryManager
+  }
+
+  private var taskMURS: MURScheduler = _
+
+  def setTaskMURScheduler(taskMURS: MURScheduler): Unit = {
+    this.taskMURS = taskMURS
   }
 
   def runTask(context: TaskContext): T

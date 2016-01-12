@@ -17,6 +17,8 @@
 
 package org.apache.spark
 
+import org.apache.spark.scheduler.MURScheduler
+
 import scala.collection.mutable.{ArrayBuffer, HashMap}
 
 import org.apache.spark.executor.TaskMetrics
@@ -121,5 +123,9 @@ private[spark] class TaskContextImpl(
     // not captured in the task closure and are already deserialized
     internalAccumulators.foreach(registerAccumulator)
     internalAccumulators.map { a => (a.name.get, a) }.toMap
+  }
+
+  private[spark] override def taskMURS(): MURScheduler = {
+    throw new RuntimeException("This method should not be called any more.")
   }
 }

@@ -115,7 +115,7 @@ private[spark] class Executor(
 
   startDriverHeartbeater()
 
-  private val mursSampling = ThreadUtils.newDaemonSingleThreadScheduledExecutor("excutor-mursSampling")
+  private val mursRunThread = ThreadUtils.newDaemonSingleThreadScheduledExecutor("excutor-mursSampling")
   private val murScheduler = new MURScheduler(executorId)
 
   startExecutorMURSSampling()
@@ -143,8 +143,8 @@ private[spark] class Executor(
     env.metricsSystem.report()
     heartbeater.shutdown()
     heartbeater.awaitTermination(10, TimeUnit.SECONDS)
-    mursSampling.shutdown()
-    mursSampling.awaitTermination(2, TimeUnit.SECONDS)
+    mursRunThread.shutdown()
+    mursRunThread.awaitTermination(2, TimeUnit.SECONDS)
     threadPool.shutdown()
     if (!isLocal) {
       env.stop()
@@ -202,6 +202,7 @@ private[spark] class Executor(
         updateDependencies(taskFiles, taskJars)
         task = ser.deserialize[Task[Any]](taskBytes, Thread.currentThread.getContextClassLoader)
         task.setTaskMemoryManager(taskMemoryManager)
+        task.setTaskMURScheduler(murScheduler)
 
         // If this task has been killed before we deserialized it, let's quit now. Otherwise,
         // continue executing the task.
@@ -485,6 +486,10 @@ private[spark] class Executor(
    * update the messages of all tasks in the executor, and judge the available of MURS
    */
   private def updateMURSMessages(): Unit = {
+
+    // MURS update sample flag of all tasks to tell them that they should sample now
+    murScheduler.updateAllSampleFlag()
+
     // list of (task id, metrics) to send back to the driver
     val tasksMetrics = new ArrayBuffer[(Long, TaskMetrics)]()
     val curGCTime = computeTotalGcTime()
@@ -518,7 +523,7 @@ private[spark] class Executor(
    * Schedules a thread to sampling for MURS
    */
   private def startExecutorMURSSampling(): Unit = {
-    val intervalMs = conf.getTimeAsMs("spark.murs.samplingInterval", "2s")
+    val intervalMs = conf.getTimeAsMs("spark.murs.samplingInterval", "1s")
 
     // Wait a random interval so the sampling don't end up in sync
     val initialDelay = intervalMs + (math.random * intervalMs).asInstanceOf[Int]
@@ -526,7 +531,7 @@ private[spark] class Executor(
     val samplingTask = new Runnable() {
       override def run(): Unit = Utils.logUncaughtExceptions(updateMURSMessages())
     }
-    mursSampling.scheduleAtFixedRate(samplingTask, initialDelay, intervalMs, TimeUnit.MILLISECONDS)
+    mursRunThread.scheduleAtFixedRate(samplingTask, initialDelay, intervalMs, TimeUnit.MILLISECONDS)
 
   }
 }

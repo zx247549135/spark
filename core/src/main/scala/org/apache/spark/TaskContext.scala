@@ -23,6 +23,7 @@ import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.executor.TaskMetrics
 import org.apache.spark.memory.TaskMemoryManager
 import org.apache.spark.metrics.source.Source
+import org.apache.spark.scheduler.MURScheduler
 import org.apache.spark.util.TaskCompletionListener
 
 
@@ -187,6 +188,12 @@ abstract class TaskContext extends Serializable {
    * accumulator id and the value of the Map is the latest accumulator local value.
    */
   private[spark] def collectAccumulators(): Map[Long, Any]
+
+  /**
+   * Return the MURScheduler which is set in each task in the executor.
+   * This is first used to sample data and then scheduler.
+   */
+  private[spark] def taskMURS(): MURScheduler
 
   /**
    * Accumulators for tracking internal metrics indexed by the name.

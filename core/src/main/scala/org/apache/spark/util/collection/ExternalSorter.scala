@@ -650,7 +650,7 @@ private[spark] class ExternalSorter[K, V, C](
     if (spills.isEmpty) {
       // Case where we only have in-memory data
       val collection = if (aggregator.isDefined) map else buffer
-      val it = collection.destructiveSortedWritablePartitionedIterator(comparator)
+      val it = collection.destructiveSortedWritablePartitionedMURSIterator(comparator, context)
       while (it.hasNext) {
         val writer = blockManager.getDiskWriter(blockId, outputFile, serInstance, fileBufferSize,
           context.taskMetrics.shuffleWriteMetrics.get)
