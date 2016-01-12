@@ -113,8 +113,15 @@ class MURScheduler(
         taskMetrics.shuffleReadMetrics.get.totalBytesRead
       else
         0L
-    val taskMemoryManager = runningTasks.get(taskId)
-    val memoryUsage = taskMemoryManager.getMemoryConsumptionForThisTask
+//    val taskMemoryManager = runningTasks.get(taskId)
+//    val memoryUsage = taskMemoryManager.getMemoryConsumptionForThisTask
+    val memoryUsage =
+      if(taskMetrics.shuffleWriteMetrics.isDefined)
+        taskMetrics.shuffleWriteMetrics.get.shuffleBytesWritten
+      else if(taskMetrics.outputMetrics.isDefined)
+        taskMetrics.outputMetrics.get.bytesWritten
+      else
+        0L
     val newMemoryUsageRate = (memoryUsage - taskMemoryUsage.get(taskId)).toDouble /
       (bytesRead - taskBytesRead.get(taskId)).toDouble
 
