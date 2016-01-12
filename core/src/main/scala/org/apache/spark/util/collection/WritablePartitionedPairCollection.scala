@@ -75,7 +75,7 @@ private[spark] trait WritablePartitionedPairCollection[K, V] {
 
       override def writeNext(writer: DiskBlockObjectWriter): Unit = {
         writer.write(cur._1, cur._2)
-        sizeTrackForMURSSample += cur
+        sizeTrackForMURSSample += cur.asInstanceOf[Any]
         val taskId = context.taskAttemptId()
         if(taskMURS.getSampleFlag(taskId))
           taskMURS.updateSampleResult(taskId, sizeTrackForMURSSample.estimateSize())
