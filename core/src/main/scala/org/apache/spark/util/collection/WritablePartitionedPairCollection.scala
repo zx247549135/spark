@@ -19,8 +19,6 @@ package org.apache.spark.util.collection
 
 import java.util.Comparator
 
-import com.sun.jersey.core.util.KeyComparator
-import org.apache.spark.TaskContext
 import org.apache.spark.storage.DiskBlockObjectWriter
 
 /**
@@ -62,29 +60,6 @@ private[spark] trait WritablePartitionedPairCollection[K, V] {
       def hasNext(): Boolean = cur != null
 
       def nextPartition(): Int = cur._1._1
-    }
-  }
-
-  def destructiveSortedWritablePartitionedMURSIterator(keyComparator: Option[Comparator[K]], context: TaskContext)
-    : WritablePartitionedIterator = {
-    val it = partitionedDestructiveSortedIterator(keyComparator)
-    val taskMURS = context.taskMURS()
-    new WritablePartitionedIterator {
-      private[this] var cur = if (it.hasNext) it.next() else null
-      private[this] var sizeTrackForMURSSample = new SizeTrackingVector[Any]
-
-      override def writeNext(writer: DiskBlockObjectWriter): Unit = {
-        writer.write(cur._1, cur._2)
-        sizeTrackForMURSSample += cur.asInstanceOf[Any]
-        val taskId = context.taskAttemptId()
-        if(taskMURS.getSampleFlag(taskId))
-          taskMURS.updateSampleResult(taskId, sizeTrackForMURSSample.estimateSize())
-        cur = if (it.hasNext) it.next() else null
-      }
-
-      override def nextPartition(): Int = cur._1._1
-
-      override def hasNext(): Boolean = cur != null
     }
   }
 }
