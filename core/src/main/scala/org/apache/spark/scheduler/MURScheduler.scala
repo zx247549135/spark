@@ -79,8 +79,14 @@ class MURScheduler(
 
   def updateSampleResult(taskId: Long, sampleResult: Long): Unit = {
     updateSingleTaskSampleFlag(taskId)
-    val taskMemoryUsageIncrease = sampleResult - taskMemoryUsage.get(taskId)
-    taskMemoryUsage.replace(taskId, sampleResult)
+    var taskMemoryUsageIncrease = 0L
+    if(taskMemoryUsage.contains(taskId)){
+      taskMemoryUsageIncrease = sampleResult - taskMemoryUsage.get(taskId)
+      taskMemoryUsage.replace(taskId, sampleResult)
+    }else {
+      taskMemoryUsageIncrease = sampleResult
+      taskMemoryUsage.put(taskId, sampleResult)
+    }
     val bytesRead = taskBytesRead.get(taskId)
     val newMemoryUsageRate = taskMemoryUsageIncrease.toDouble / bytesRead.toDouble
     if(taskMemoryUsageRates.contains(taskId)){
@@ -89,7 +95,7 @@ class MURScheduler(
       val newResultBuffer = new ArrayBuffer[Double]
       taskMemoryUsageRates.put(taskId, newResultBuffer += newMemoryUsageRate)
     }
-    logInfo(s"Task $taskId on executor $executorId has bytes read $bytesRead, memory usage $newMemoryUsageRate")
+    logInfo(s"Task $taskId on executor $executorId has bytes read $bytesRead, memory usage increase $taskMemoryUsageIncrease")
   }
 
   /**
