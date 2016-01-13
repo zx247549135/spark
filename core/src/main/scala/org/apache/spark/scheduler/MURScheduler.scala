@@ -106,24 +106,36 @@ class MURScheduler(
    */
   def updateTaskInformation(taskId: Long,
                             taskMetrics: TaskMetrics): Unit = {
-    val bytesRead =
-      if(taskMetrics.inputMetrics.isDefined)
-        taskMetrics.inputMetrics.get.bytesRead
-      else if(taskMetrics.shuffleReadMetrics.isDefined)
-        taskMetrics.shuffleReadMetrics.get.totalBytesRead
-      else
-        0L
+    var bytesRead = 0L
+    if(taskMetrics.inputMetrics.isDefined)
+      bytesRead = taskMetrics.inputMetrics.get.bytesRead
+    else if(taskMetrics.shuffleReadMetrics.isDefined && bytesRead == 0L)
+      bytesRead = taskMetrics.shuffleReadMetrics.get.totalBytesRead
 //    val taskMemoryManager = runningTasks.get(taskId)
 //    val memoryUsage = taskMemoryManager.getMemoryConsumptionForThisTask
-    val memoryUsage =
-      if(taskMetrics.shuffleWriteMetrics.isDefined)
-        taskMetrics.shuffleWriteMetrics.get.shuffleBytesWritten
-      else if(taskMetrics.outputMetrics.isDefined)
-        taskMetrics.outputMetrics.get.bytesWritten
-      else
-        0L
-    val newMemoryUsageRate = (memoryUsage - taskMemoryUsage.get(taskId)).toDouble /
-      (bytesRead - taskBytesRead.get(taskId)).toDouble
+    var memoryUsage = 0L
+    if(taskMetrics.shuffleWriteMetrics.isDefined)
+      memoryUsage = taskMetrics.shuffleWriteMetrics.get.shuffleBytesWritten
+    else if(taskMetrics.outputMetrics.isDefined && memoryUsage == 0L)
+      memoryUsage = taskMetrics.outputMetrics.get.bytesWritten
+
+    var taskMemoryUsageIncrease = 0L
+    if(taskMemoryUsage.contains(taskId)){
+      taskMemoryUsageIncrease = memoryUsage - taskMemoryUsage.get(taskId)
+      taskMemoryUsage.replace(taskId, memoryUsage)
+    }else {
+      taskMemoryUsageIncrease = memoryUsage
+      taskMemoryUsage.put(taskId, memoryUsage)
+    }
+    var bytesReadIncrease = 0L
+    if(taskBytesRead.containsKey(taskId)){
+      bytesReadIncrease = bytesRead - taskBytesRead.get(taskId)
+      taskBytesRead.replace(taskId, bytesRead)
+    }else{
+      bytesReadIncrease = bytesRead
+      taskBytesRead.put(taskId, bytesRead)
+    }
+    val newMemoryUsageRate = taskMemoryUsageIncrease.toDouble / bytesReadIncrease.toDouble
 
     // if the task memory usage rate is first build, it can't be get by the method get().
     if (taskMemoryUsageRates.containsKey(taskId)) {
@@ -134,10 +146,9 @@ class MURScheduler(
       memoryUsageRateBuffer += newMemoryUsageRate
       taskMemoryUsageRates.put(taskId, memoryUsageRateBuffer)
     }
-    taskBytesRead.replace(taskId, bytesRead)
-    taskMemoryUsage.replace(taskId, memoryUsage)
 
     logInfo(s"Task $taskId on executor $executorId has bytes read $bytesRead, memory usage $memoryUsage")
+    logInfo(s"Task $taskId on executor $executorId increase bytes read $bytesReadIncrease, memory usage $taskMemoryUsageIncrease")
   }
 
 
