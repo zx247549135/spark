@@ -18,18 +18,20 @@ class MURScheduler(
 
   private val runningTasksSampleFlag = new ConcurrentHashMap[Long, Boolean]
 
-  private val runningTasks = new ConcurrentHashMap[Long, TaskMemoryManager]
+  private val runningTasks = new ConcurrentHashMap[Long, Long]
   private val finishedTasks = new ArrayBuffer[Long]()
   private val mursStopTasks = new ArrayBuffer[Long]()
   private val taskBytesRead = new ConcurrentHashMap[Long, Long]
+  private val taskRecordsRead = new ConcurrentHashMap[Long, Long]
   private val taskMemoryUsage = new ConcurrentHashMap[Long, Long]
   private val taskMemoryUsageRates = new ConcurrentHashMap[Long, ArrayBuffer[Double]]
 
-  def registerTask(taskId: Long, taskMemoryManager: TaskMemoryManager): Unit = {
-    runningTasks.put(taskId, taskMemoryManager)
+  def registerTask(taskId: Long): Unit = {
+    runningTasks.put(taskId, 0L)
     runningTasksSampleFlag.put(taskId, false)
-    taskBytesRead.put(taskId,0)
-    taskMemoryUsage.put(taskId,0)
+    taskBytesRead.put(taskId, 0)
+    taskRecordsRead.put(taskId, 0)
+    taskMemoryUsage.put(taskId, 0)
   }
 
   def removeFinishedTask(taskId: Long): Unit = {
@@ -46,6 +48,14 @@ class MURScheduler(
 
   def registerStopTask(taskId: Long): Unit = {
     mursStopTasks += taskId
+  }
+
+  /**
+   * Before the task read it's input, we update the total records first
+   */
+
+  def updateTotalRecords(taskId: Long, totalRecords: Long): Unit = {
+    runningTasks.replace(taskId, totalRecords)
   }
 
   /**
@@ -95,7 +105,8 @@ class MURScheduler(
       val newResultBuffer = new ArrayBuffer[Double]
       taskMemoryUsageRates.put(taskId, newResultBuffer += newMemoryUsageRate)
     }
-    logInfo(s"Task $taskId on executor $executorId has bytes read $bytesRead, memory usage increase $taskMemoryUsageIncrease")
+    logInfo(s"2.Task $taskId on executor $executorId has memory usage $sampleResult," +
+      s" memory usage increase $taskMemoryUsageIncrease")
   }
 
   /**
@@ -104,16 +115,20 @@ class MURScheduler(
    * @param taskId
    * @param taskMetrics
    */
-  def updateTaskInformation(taskId: Long,
-                            taskMetrics: TaskMetrics): Unit = {
+  def updateTaskInformation(taskId: Long, taskMetrics: TaskMetrics): Unit = {
     var bytesRead_input = 0L
     var bytesRead_shuffle = 0L
-    if(taskMetrics.inputMetrics.isDefined)
+    var recordsRead_input = 0L
+    var recordsRead_shuffle = 0L
+    if(taskMetrics.inputMetrics.isDefined) {
       bytesRead_input = taskMetrics.inputMetrics.get.bytesRead
-    if(taskMetrics.shuffleReadMetrics.isDefined)
+      recordsRead_input = taskMetrics.inputMetrics.get.recordsRead
+    }
+    if(taskMetrics.shuffleReadMetrics.isDefined) {
       bytesRead_shuffle = taskMetrics.shuffleReadMetrics.get.totalBytesRead
-//    val taskMemoryManager = runningTasks.get(taskId)
-//    val memoryUsage = taskMemoryManager.getMemoryConsumptionForThisTask
+      recordsRead_shuffle = taskMetrics.shuffleReadMetrics.get.recordsRead
+    }
+
     var memoryUsage_output = 0L
     var memoryUsage_shuffle = 0L
     if(taskMetrics.shuffleWriteMetrics.isDefined)
@@ -137,8 +152,8 @@ class MURScheduler(
 //      taskMemoryUsageRates.put(taskId, memoryUsageRateBuffer)
 //    }
 
-    logInfo(s"Task $taskId on executor $executorId has bytes read $bytesRead_input / $bytesRead_shuffle," +
-      s" memory usage $memoryUsage_output / $memoryUsage_shuffle .")
+    logInfo(s"1.Task $taskId on executor $executorId has bytes read $bytesRead_input / $bytesRead_shuffle," +
+      s"records read $recordsRead_input / $recordsRead_shuffle, memory usage $memoryUsage_output / $memoryUsage_shuffle.")
   }
 
 
