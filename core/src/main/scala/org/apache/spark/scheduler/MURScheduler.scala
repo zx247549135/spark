@@ -31,6 +31,9 @@ class MURScheduler(
   private val taskRecordsRead_input = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
   private val taskRecordsRead_shuffle = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
 
+  private val taskBytesShuffleWrite = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
+  private val taskBytesOutput = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
+
   // the memory usage of each task
   private val taskMemoryUsage = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
 
@@ -47,10 +50,13 @@ class MURScheduler(
     val bytesRead_shuffle = getValue(taskBytesRead_shuffle.get(taskId))
     val recordsRead_input = getValue(taskRecordsRead_input.get(taskId))
     val recordsRead_shuffle = getValue(taskRecordsRead_shuffle.get(taskId))
+    val bytesOutput = getValue(taskBytesOutput.get(taskId))
+    val bytesShuffleWrite = getValue(taskBytesShuffleWrite.get(taskId))
     val memoryUsage = getValue(taskMemoryUsage.get(taskId))
     if(memoryUsage != 0 && taskId % 4 == 0)
       logInfo(s"Task $taskId has bytes read $bytesRead_input / $bytesRead_shuffle, " +
         s"records $totalRecords, read records $recordsRead_input / $recordsRead_shuffle, " +
+        s"bytes output $bytesOutput, shuffle write $bytesShuffleWrite, " +
         s"memory usage $memoryUsage.")
   }
 
@@ -61,6 +67,8 @@ class MURScheduler(
     taskBytesRead_shuffle.put(taskId, new ArrayBuffer[Long])
     taskRecordsRead_input.put(taskId, new ArrayBuffer[Long])
     taskRecordsRead_shuffle.put(taskId, new ArrayBuffer[Long])
+    taskBytesOutput.put(taskId, new ArrayBuffer[Long])
+    taskBytesShuffleWrite.put(taskId, new ArrayBuffer[Long])
     taskMemoryUsage.put(taskId, new ArrayBuffer[Long])
   }
 
@@ -71,6 +79,8 @@ class MURScheduler(
     taskBytesRead_shuffle.remove(taskId)
     taskRecordsRead_input.remove(taskId)
     taskRecordsRead_shuffle.remove(taskId)
+    taskBytesOutput.remove(taskId)
+    taskBytesShuffleWrite.remove(taskId)
     taskMemoryUsage.remove(taskId)
   }
 
@@ -146,6 +156,14 @@ class MURScheduler(
       recordsRead_shuffle = taskMetrics.shuffleReadMetrics.get.recordsRead
     }
 
+    var bytesOutput = 0L
+    var bytesShuffleWrite = 0L
+
+    if(taskMetrics.outputMetrics.isDefined)
+      bytesOutput = taskMetrics.outputMetrics.get.bytesWritten
+    if(taskMetrics.shuffleWriteMetrics.isDefined)
+      bytesShuffleWrite = taskMetrics.shuffleWriteMetrics.get.shuffleBytesWritten
+
     def appendValue(mapWithBuffer: ConcurrentHashMap[Long, ArrayBuffer[Long]], value: Long): Unit = {
       val valueBuffer = mapWithBuffer.get(taskId)
       mapWithBuffer.replace(taskId, valueBuffer += value)
@@ -155,6 +173,8 @@ class MURScheduler(
     appendValue(taskBytesRead_shuffle, bytesRead_shuffle)
     appendValue(taskRecordsRead_input, recordsRead_input)
     appendValue(taskRecordsRead_shuffle, recordsRead_shuffle)
+    appendValue(taskBytesOutput, bytesOutput)
+    appendValue(taskBytesShuffleWrite, bytesShuffleWrite)
 
   }
 
