@@ -37,6 +37,33 @@ class MURScheduler(
   // the memory usage of each task
   private val taskMemoryUsage = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
 
+  def showMessage(taskId: Long): Unit = {
+
+    if( ! runningTasks.containsKey(taskId) )
+      return
+    
+    val totalRecords = runningTasks.get(taskId)
+    def getValue(valueBuffer: ArrayBuffer[Long]): Long = {
+      if (valueBuffer.length != 0 )
+        valueBuffer.last
+      else
+        0L
+    }
+
+    val bytesRead_input = getValue(taskBytesRead_input.get(taskId))
+    val bytesRead_shuffle = getValue(taskBytesRead_shuffle.get(taskId))
+    val recordsRead_input = getValue(taskRecordsRead_input.get(taskId))
+    val recordsRead_shuffle = getValue(taskRecordsRead_shuffle.get(taskId))
+    val bytesOutput = getValue(taskBytesOutput.get(taskId))
+    val bytesShuffleWrite = getValue(taskBytesShuffleWrite.get(taskId))
+    val memoryUsage = getValue(taskMemoryUsage.get(taskId))
+    if(memoryUsage != 0 && taskId % 4 == 0)
+      logInfo(s"Task $taskId has bytes read $bytesRead_input / $bytesRead_shuffle, " +
+        s"records $totalRecords, read records $recordsRead_input / $recordsRead_shuffle, " +
+        s"bytes output $bytesOutput, shuffle write $bytesShuffleWrite, " +
+        s"memory usage $memoryUsage.")
+  }
+
   def registerTask(taskId: Long): Unit = {
     runningTasks.put(taskId, 0L)
     runningTasksSampleFlag.put(taskId, false)
