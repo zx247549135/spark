@@ -24,34 +24,48 @@ class MURScheduler(
   private val mursStopTasks = new ArrayBuffer[Long]()
 
   // the processed bytes of each task
-  private val taskBytesProcess = new ConcurrentHashMap[Long, Long]
-  // the processed bytes increased how much
-  private val taskBytesProcessIncrease = new ConcurrentHashMap[Long, Long]
+  private val taskBytesRead_input = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
+  private val taskBytesRead_shuffle = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
 
   // the records which has been read by this task
-  private val taskRecordsRead = new ConcurrentHashMap[Long, Long]
+  private val taskRecordsRead_input = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
+  private val taskRecordsRead_shuffle = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
 
   // the memory usage of each task
-  private val taskMemoryUsage = new ConcurrentHashMap[Long, Long]
-  private val taskMemoryUsageRates = new ConcurrentHashMap[Long, ArrayBuffer[Double]]
-  private val taskType = new ConcurrentHashMap[Long, String]
+  private val taskMemoryUsage = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
+
+  def showMessage(): Unit = {
+    for( taskId <- runningTasks.keySet()){
+      val totalRecords = runningTasks.get(taskId)
+      val bytesRead_input = taskBytesRead_input.get(taskId).mkString("-")
+      val bytesRead_shuffle = taskBytesRead_shuffle.get(taskId).mkString("-")
+      val recordsRead_input = taskRecordsRead_input.get(taskId).mkString("-")
+      val recordsRead_shuffle = taskRecordsRead_shuffle.get(taskId).mkString("-")
+      val memoryUsage = taskMemoryUsage.get(taskId).mkString("-")
+      logInfo(s"Task $taskId has bytes read $bytesRead_input / $bytesRead_shuffle, " +
+        s"records $totalRecords, read records $recordsRead_input / $recordsRead_shuffle, " +
+        s"memory usage $memoryUsage.")
+    }
+  }
 
   def registerTask(taskId: Long): Unit = {
     runningTasks.put(taskId, 0L)
     runningTasksSampleFlag.put(taskId, false)
-    taskBytesProcess.put(taskId, 0)
-    taskBytesProcessIncrease.put(taskId, 0)
-    taskRecordsRead.put(taskId, 0)
-    taskMemoryUsage.put(taskId, 0)
+    taskBytesRead_input.put(taskId, new ArrayBuffer[Long])
+    taskBytesRead_shuffle.put(taskId, new ArrayBuffer[Long])
+    taskRecordsRead_input.put(taskId, new ArrayBuffer[Long])
+    taskRecordsRead_shuffle.put(taskId, new ArrayBuffer[Long])
+    taskMemoryUsage.put(taskId, new ArrayBuffer[Long])
   }
 
   def removeFinishedTask(taskId: Long): Unit = {
     runningTasks.remove(taskId)
     runningTasksSampleFlag.remove(taskId)
-    taskBytesProcess.remove(taskId)
-    taskBytesProcessIncrease.remove(taskId)
+    taskBytesRead_input.remove(taskId)
+    taskBytesRead_shuffle.remove(taskId)
+    taskRecordsRead_input.remove(taskId)
+    taskRecordsRead_shuffle.remove(taskId)
     taskMemoryUsage.remove(taskId)
-    taskMemoryUsageRates.remove(taskId)
   }
 
   def registerFinishedTask(taskId: Long): Unit = {
@@ -101,32 +115,16 @@ class MURScheduler(
 
   def updateSampleResult(taskId: Long, sampleResult: Long): Unit = {
     updateSingleTaskSampleFlag(taskId)
-    var taskMemoryUsageIncrease = 0L
-    if(taskMemoryUsage.contains(taskId)){
-      taskMemoryUsageIncrease = sampleResult - taskMemoryUsage.get(taskId)
-      taskMemoryUsage.replace(taskId, sampleResult)
-    }else {
-      taskMemoryUsageIncrease = sampleResult
-      taskMemoryUsage.put(taskId, sampleResult)
-    }
 
-    val bytesProcessIncrease = taskBytesProcessIncrease.get(taskId)
-    val newMemoryUsageRate = taskMemoryUsageIncrease.toDouble / bytesProcessIncrease.toDouble
-    if(taskMemoryUsageRates.contains(taskId)){
-      taskMemoryUsageRates.get(taskId) += newMemoryUsageRate
-    }else{
-      val newResultBuffer = new ArrayBuffer[Double]
-      taskMemoryUsageRates.put(taskId, newResultBuffer += newMemoryUsageRate)
-    }
-    logInfo(s"Task $taskId on executor $executorId has memory usage $sampleResult," +
-      s" memory usage increase $taskMemoryUsageIncrease")
+    val taskMemoryUsageBuffer = taskMemoryUsage.get(taskId)
+    taskMemoryUsage.replace(taskId, taskMemoryUsageBuffer += sampleResult)
   }
 
   /**
    * Update the bytes read, memory usage and memory usage rate for one task, the metrics
    * and task memory manager is necessary. This method is used in executor
    * @param taskId
-   * @param taskMetrics
+   * @param taskMetrics the mertrics contain the input record and shuffle write to file
    */
   def updateTaskInformation(taskId: Long, taskMetrics: TaskMetrics): Unit = {
     var bytesRead_input = 0L
@@ -142,39 +140,15 @@ class MURScheduler(
       recordsRead_shuffle = taskMetrics.shuffleReadMetrics.get.recordsRead
     }
 
-    var memoryUsage_output = 0L
-    var memoryUsage_shuffle = 0L
-    if(taskMetrics.shuffleWriteMetrics.isDefined)
-      memoryUsage_shuffle = taskMetrics.shuffleWriteMetrics.get.shuffleBytesWritten
-    if(taskMetrics.outputMetrics.isDefined)
-      memoryUsage_output = taskMetrics.outputMetrics.get.bytesWritten
+    def appendValue(mapWithBuffer: ConcurrentHashMap[Long, ArrayBuffer[Long]], value: Long): Unit = {
+      val valueBuffer = mapWithBuffer.get(taskId)
+      mapWithBuffer.replace(taskId, valueBuffer += value)
+    }
 
-    if(bytesRead_input == 0L && bytesRead_shuffle != 0L) {
-      taskType.replace(taskId, "shuffle")
-      val bytesProcess = bytesRead_shuffle * ( recordsRead_shuffle / runningTasks.get(taskId) )
-      val bytesProcessIncrease = bytesProcess - taskBytesProcess.get(taskId)
-      taskBytesProcess.replace(taskId, bytesProcess)
-      taskBytesProcessIncrease.replace(taskId, bytesProcessIncrease)
-    }
-    else if (bytesRead_input != 0L && bytesRead_shuffle == 0L) {
-      taskType.replace(taskId, "persist")
-      val bytesProcess = bytesRead_input * ( recordsRead_input / runningTasks.get(taskId) )
-      val bytesProcessIncrease = bytesProcess - taskBytesProcess.get(taskId)
-      taskBytesProcess.replace(taskId, bytesProcess)
-      taskBytesProcessIncrease.replace(taskId, bytesProcessIncrease)
-    }
-    else if (bytesRead_input != 0L && bytesRead_shuffle != 0L) {
-      taskType.replace(taskId, "join")
-      val bytesProcess =
-        if(recordsRead_shuffle == 0L) {
-          bytesRead_input * (recordsRead_input / runningTasks.get(taskId))
-        } else {
-          bytesRead_shuffle * (recordsRead_shuffle / runningTasks.get(taskId))
-        }
-      val bytesProcessIncrease = bytesProcess - taskBytesProcess.get(taskId)
-      taskBytesProcess.replace(taskId, bytesProcess)
-      taskBytesProcessIncrease.replace(taskId, bytesProcessIncrease)
-    }
+    appendValue(taskBytesRead_input, bytesRead_input)
+    appendValue(taskBytesRead_shuffle, bytesRead_shuffle)
+    appendValue(taskRecordsRead_input, recordsRead_input)
+    appendValue(taskRecordsRead_shuffle, recordsRead_shuffle)
 
   }
 
