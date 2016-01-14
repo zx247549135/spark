@@ -53,7 +53,7 @@ class MURScheduler(
     val bytesOutput = getValue(taskBytesOutput.get(taskId))
     val bytesShuffleWrite = getValue(taskBytesShuffleWrite.get(taskId))
     val memoryUsage = getValue(taskMemoryUsage.get(taskId))
-    if(memoryUsage != 0 && taskId % 4 == 0)
+    if(memoryUsage != 0 && taskId % 4 == 0 && runningTasks.containsKey(taskId))
       logInfo(s"Task $taskId has bytes read $bytesRead_input / $bytesRead_shuffle, " +
         s"records $totalRecords, read records $recordsRead_input / $recordsRead_shuffle, " +
         s"bytes output $bytesOutput, shuffle write $bytesShuffleWrite, " +
