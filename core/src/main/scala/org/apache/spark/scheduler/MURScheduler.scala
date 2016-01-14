@@ -36,11 +36,11 @@ class MURScheduler(
 
   def showMessage(taskId: Long): Unit = {
     val totalRecords = runningTasks.get(taskId)
-    val bytesRead_input = taskBytesRead_input.get(taskId).mkString("-")
-    val bytesRead_shuffle = taskBytesRead_shuffle.get(taskId).mkString("-")
-    val recordsRead_input = taskRecordsRead_input.get(taskId).mkString("-")
-    val recordsRead_shuffle = taskRecordsRead_shuffle.get(taskId).mkString("-")
-    val memoryUsage = taskMemoryUsage.get(taskId).mkString("-")
+    val bytesRead_input = taskBytesRead_input.get(taskId).last
+    val bytesRead_shuffle = taskBytesRead_shuffle.get(taskId).last
+    val recordsRead_input = taskRecordsRead_input.get(taskId).last
+    val recordsRead_shuffle = taskRecordsRead_shuffle.get(taskId).last
+    val memoryUsage = taskMemoryUsage.get(taskId).last
     logInfo(s"Task $taskId has bytes read $bytesRead_input / $bytesRead_shuffle, " +
         s"records $totalRecords, read records $recordsRead_input / $recordsRead_shuffle, " +
         s"memory usage $memoryUsage.")
