@@ -35,7 +35,7 @@ class MURScheduler(
   private val taskMemoryUsage = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
 
   def showMessage(): Unit = {
-    for( taskId <- runningTasks.keySet()){
+    for( taskId <- runningTasks.keys()){
       val totalRecords = runningTasks.get(taskId)
       val bytesRead_input = taskBytesRead_input.get(taskId).mkString("-")
       val bytesRead_shuffle = taskBytesRead_shuffle.get(taskId).mkString("-")
