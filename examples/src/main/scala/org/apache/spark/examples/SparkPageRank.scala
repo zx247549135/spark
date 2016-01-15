@@ -45,7 +45,7 @@ object SparkPageRank {
 
   def main(args: Array[String]) {
     if (args.length < 1) {
-      System.err.println("Usage: SparkPageRank <file> <iter> <savefile>")
+      System.err.println("Usage: SparkPageRank <file> <iter> <savefile> <partition>")
       System.exit(1)
     }
 
@@ -54,11 +54,11 @@ object SparkPageRank {
     val sparkConf = new SparkConf().setAppName("PageRank")
     val iters = if (args.length > 1) args(1).toInt else 10
     val ctx = new SparkContext(sparkConf)
-    val lines = ctx.textFile(args(0), 1)
+    val lines = ctx.textFile(args(0), args(3).toInt)
     val links = lines.map{ s =>
       val parts = s.split("\\s+")
       (parts(0), parts(1))
-    }.groupByKey().cache()
+    }.distinct().groupByKey().cache()
     var ranks = links.mapValues(v => 1.0)
 
     for (i <- 1 to iters) {
