@@ -41,7 +41,7 @@ class MURScheduler(
 
     if( ! runningTasks.containsKey(taskId) )
       return
-    
+
     val totalRecords = runningTasks.get(taskId)
     def getValue(valueBuffer: ArrayBuffer[Long]): Long = {
       if (valueBuffer.length != 0 )
@@ -102,7 +102,6 @@ class MURScheduler(
 
   def updateTotalRecords(taskId: Long, totalRecords: Long): Unit = {
     runningTasks.replace(taskId, totalRecords)
-    logInfo(s"Records Update: Task $taskId with $totalRecords.")
   }
 
   /**
@@ -139,7 +138,6 @@ class MURScheduler(
 
     val taskMemoryUsageBuffer = taskMemoryUsage.get(taskId)
     taskMemoryUsage.replace(taskId, taskMemoryUsageBuffer += sampleResult)
-    logInfo(s"Sample Update: Task $taskId with $sampleResult.")
   }
 
   /**
@@ -181,9 +179,6 @@ class MURScheduler(
     appendValue(taskRecordsRead_shuffle, recordsRead_shuffle)
     appendValue(taskBytesOutput, bytesOutput)
     appendValue(taskBytesShuffleWrite, bytesShuffleWrite)
-
-    logInfo(s"Former Update: Task　$taskId with $bytesRead_input-$bytesRead_shuffle-$recordsRead_input-$recordsRead_shuffle" +
-      s"-$bytesOutput-$bytesShuffleWrite.")
 
   }
 
