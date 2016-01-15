@@ -238,7 +238,8 @@ class HadoopRDD[K, V](
         // If we can't get the bytes read from the FS stats, fall back to the split size,
         // which may be inaccurate.
         try {
-          inputMetrics.incBytesRead(split.inputSplit.value.getLength)
+          if(inputMetrics.bytesRead != 0L)
+            inputMetrics.incBytesRead(split.inputSplit.value.getLength)
         } catch {
           case e: java.io.IOException =>
             logWarning("Unable to get input size to set InputMetrics for task", e)
