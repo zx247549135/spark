@@ -45,7 +45,7 @@ object SparkPageRank {
 
   def main(args: Array[String]) {
     if (args.length < 1) {
-      System.err.println("Usage: SparkPageRank <file> <iter>")
+      System.err.println("Usage: SparkPageRank <file> <iter> <savefile>")
       System.exit(1)
     }
 
@@ -69,8 +69,9 @@ object SparkPageRank {
       ranks = contribs.reduceByKey(_ + _).mapValues(0.15 + 0.85 * _)
     }
 
-    val output = ranks.collect()
-    output.foreach(tup => println(tup._1 + " has rank: " + tup._2 + "."))
+    // val output = ranks.collect()
+    // output.foreach(tup => println(tup._1 + " has rank: " + tup._2 + "."))
+    ranks.saveAsTextFile(args(2))
 
     ctx.stop()
   }

@@ -536,6 +536,7 @@ private[spark] class Executor(
     val samplingTask = new Runnable() {
       override def run(): Unit = Utils.logUncaughtExceptions(updateMURSMessages())
     }
+    logInfo(s"Start MURS thread on executor $executorId")
     mursRunThread.scheduleAtFixedRate(samplingTask, initialDelay, intervalMs, TimeUnit.MILLISECONDS)
 
   }
