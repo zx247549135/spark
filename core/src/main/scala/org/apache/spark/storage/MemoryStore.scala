@@ -285,7 +285,6 @@ private[spark] class MemoryStore(blockManager: BlockManager, memoryManager: Memo
       while (values.hasNext && keepUnrolling) {
         vector += values.next()
         try {
-          logInfo(s"MURS Help: $taskId")
           val taskMURS = currentTaskMURS()
           if(taskMURS.getSampleFlag(taskId)){
             taskMURS.updateSampleResult(taskId, vector.estimateSize())
