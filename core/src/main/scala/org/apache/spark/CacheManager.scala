@@ -48,9 +48,10 @@ private[spark] class CacheManager(blockManager: BlockManager) extends Logging {
           .getInputMetricsForReadMethod(blockResult.readMethod)
         existingMetrics.incBytesRead(blockResult.bytes)
 
-        val iter = blockResult.data.asInstanceOf[Iterator[T]]
+        val iter1 = blockResult.data.asInstanceOf[Iterator[T]]
+        val (iter, iter2) = iter1.duplicate
         try {
-          context.taskMURS().updateTotalRecords(context.taskAttemptId(), iter.size)
+          context.taskMURS().updateTotalRecords(context.taskAttemptId(), iter2.size)
         } catch {
           case e: Exception => logInfo(s"MURS1: $e")
         }
@@ -63,14 +64,15 @@ private[spark] class CacheManager(blockManager: BlockManager) extends Logging {
       case None =>
         // Acquire a lock for loading this partition
         // If another thread already holds the lock, wait for it to finish return its results
-        val storedValues = acquireLockForPartition[T](key)
-        if (storedValues.isDefined) {
+        val storedValues1 = acquireLockForPartition[T](key)
+        if (storedValues1.isDefined) {
+          val (storedValues, storedValues2) = storedValues1.get.duplicate
           try {
-            context.taskMURS().updateTotalRecords(context.taskAttemptId(), storedValues.get.size)
+            context.taskMURS().updateTotalRecords(context.taskAttemptId(), storedValues2.size)
           } catch {
             case e: Exception => logInfo(s"MURS2: $e")
           }
-          return new InterruptibleIterator[T](context, storedValues.get)
+          return new InterruptibleIterator[T](context, storedValues)
         }
 
         // Otherwise, we have to load the partition ourselves
@@ -85,12 +87,13 @@ private[spark] class CacheManager(blockManager: BlockManager) extends Logging {
 
           // Otherwise, cache the values and keep track of any updates in block statuses
           val updatedBlocks = new ArrayBuffer[(BlockId, BlockStatus)]
-          val cachedValues = putInBlockManager(key, computedValues, storageLevel, updatedBlocks)
+          val cachedValues1 = putInBlockManager(key, computedValues, storageLevel, updatedBlocks)
           val metrics = context.taskMetrics
           val lastUpdatedBlocks = metrics.updatedBlocks.getOrElse(Seq[(BlockId, BlockStatus)]())
           metrics.updatedBlocks = Some(lastUpdatedBlocks ++ updatedBlocks.toSeq)
+          val (cachedValues, cachedValues2) = cachedValues1.duplicate
           try {
-            context.taskMURS().updateTotalRecords(context.taskAttemptId(), cachedValues.size)
+            context.taskMURS().updateTotalRecords(context.taskAttemptId(), cachedValues2.size)
           } catch {
             case e: Exception => logInfo(s"MURS3: $e")
           }

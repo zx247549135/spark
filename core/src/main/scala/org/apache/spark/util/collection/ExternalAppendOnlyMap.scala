@@ -152,10 +152,14 @@ class ExternalAppendOnlyMap[K, V, C](
     while (entries.hasNext) {
       curEntry = entries.next()
       val estimatedSize = currentMap.estimateSize()
-      val taskId = context.taskAttemptId()
-      val taskMURS = context.taskMURS()
-      if(taskMURS.getSampleFlag(taskId))
-        taskMURS.updateSampleResult(taskId, estimatedSize)
+      try {
+        val taskId = context.taskAttemptId()
+        val taskMURS = context.taskMURS()
+        if (taskMURS.getSampleFlag(taskId))
+          taskMURS.updateSampleResult(taskId, estimatedSize)
+      } catch {
+        case e: Exception => logInfo(s"MURS5: $e")
+      }
       if (estimatedSize > _peakMemoryUsedBytes) {
         _peakMemoryUsedBytes = estimatedSize
       }
