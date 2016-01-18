@@ -63,7 +63,11 @@ private[spark] class BlockStoreShuffleReader[K, C](
       // underlying InputStream when all records have been read.
       serializerInstance.deserializeStream(wrappedStream).asKeyValueIterator
     }
-    context.taskMURS().updateTotalRecords(context.taskAttemptId(), recordIter.size)
+    try {
+      context.taskMURS().updateTotalRecords(context.taskAttemptId(), recordIter.size)
+    } catch {
+      case e: Exception => logInfo(s"MURS5: $e")
+    }
 
     // Update the context task metrics for each record read.
     val readMetrics = context.taskMetrics.createShuffleReadMetricsForDependency()

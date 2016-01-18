@@ -268,8 +268,7 @@ private[spark] class MemoryStore(blockManager: BlockManager, memoryManager: Memo
     val previousMemoryReserved = currentUnrollMemoryForThisTask
     // Underlying vector for unrolling the block
     var vector = new SizeTrackingVector[Any]
-    val whetherGetTaskContext = Option(TaskContext.get()).isDefined
-    val taskMURS = if(whetherGetTaskContext) Option(TaskContext.get()).get.taskMURS() else null
+    val taskMURS = TaskContext.get().taskMURS()
     val taskId = currentTaskAttemptId()
 
     // Request enough memory to begin unrolling
@@ -284,11 +283,13 @@ private[spark] class MemoryStore(blockManager: BlockManager, memoryManager: Memo
     try {
       while (values.hasNext && keepUnrolling) {
         vector += values.next()
-        if(whetherGetTaskContext){
+        try {
           if(taskMURS.getSampleFlag(taskId)){
             taskMURS.updateSampleResult(taskId, vector.estimateSize())
             taskMURS.updateSingleTaskSampleFlag(taskId)
           }
+        } catch {
+          case e: Exception => logInfo(s"MURS4: $e")
         }
         if (elementsUnrolled % memoryCheckPeriod == 0) {
           // If our vector's size has exceeded the threshold, request more memory

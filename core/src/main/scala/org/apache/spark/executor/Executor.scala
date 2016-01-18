@@ -528,7 +528,7 @@ private[spark] class Executor(
    * Schedules a thread to sampling for MURS
    */
   private def startExecutorMURSSampling(): Unit = {
-    val intervalMs = conf.getTimeAsMs("spark.murs.samplingInterval", "500")
+    val intervalMs = conf.getTimeAsMs("spark.murs.samplingInterval", "500ms")
 
     // Wait a random interval so the sampling don't end up in sync
     val initialDelay = intervalMs + (math.random * intervalMs).asInstanceOf[Int]
