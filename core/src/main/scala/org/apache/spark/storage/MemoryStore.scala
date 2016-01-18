@@ -20,6 +20,8 @@ package org.apache.spark.storage
 import java.nio.ByteBuffer
 import java.util.LinkedHashMap
 
+import org.apache.spark.scheduler.MURScheduler
+
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -268,7 +270,6 @@ private[spark] class MemoryStore(blockManager: BlockManager, memoryManager: Memo
     val previousMemoryReserved = currentUnrollMemoryForThisTask
     // Underlying vector for unrolling the block
     var vector = new SizeTrackingVector[Any]
-    val taskMURS = TaskContext.get().taskMURS()
     val taskId = currentTaskAttemptId()
 
     // Request enough memory to begin unrolling
@@ -284,6 +285,8 @@ private[spark] class MemoryStore(blockManager: BlockManager, memoryManager: Memo
       while (values.hasNext && keepUnrolling) {
         vector += values.next()
         try {
+          logInfo(s"MURS Help: $taskId")
+          val taskMURS = currentTaskMURS()
           if(taskMURS.getSampleFlag(taskId)){
             taskMURS.updateSampleResult(taskId, vector.estimateSize())
             taskMURS.updateSingleTaskSampleFlag(taskId)
@@ -485,6 +488,14 @@ private[spark] class MemoryStore(blockManager: BlockManager, memoryManager: Memo
   private def currentTaskAttemptId(): Long = {
     // In case this is called on the driver, return an invalid task attempt id.
     Option(TaskContext.get()).map(_.taskAttemptId()).getOrElse(-1L)
+  }
+
+  private def currentTaskMURS(): MURScheduler = {
+    val taskMURS = Option(TaskContext.get()).map(_.taskMURS())
+    if(taskMURS.isDefined)
+      taskMURS.get
+    else
+      throw new RuntimeException("MURS: Can't get MURS in memory store.")
   }
 
   /**
