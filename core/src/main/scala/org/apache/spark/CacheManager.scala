@@ -49,7 +49,11 @@ private[spark] class CacheManager(blockManager: BlockManager) extends Logging {
         existingMetrics.incBytesRead(blockResult.bytes)
 
         val iter = blockResult.data.asInstanceOf[Iterator[T]]
-        context.taskMURS().updateTotalRecords(context.taskAttemptId(), iter.size)
+        try {
+          context.taskMURS().updateTotalRecords(context.taskAttemptId(), iter.size)
+        } catch {
+          case e: Exception => logInfo(s"MURS1: $e")
+        }
         new InterruptibleIterator[T](context, iter) {
           override def next(): T = {
             existingMetrics.incRecordsRead(1)
@@ -61,7 +65,11 @@ private[spark] class CacheManager(blockManager: BlockManager) extends Logging {
         // If another thread already holds the lock, wait for it to finish return its results
         val storedValues = acquireLockForPartition[T](key)
         if (storedValues.isDefined) {
-          context.taskMURS().updateTotalRecords(context.taskAttemptId(), storedValues.get.size)
+          try {
+            context.taskMURS().updateTotalRecords(context.taskAttemptId(), storedValues.get.size)
+          } catch {
+            case e: Exception => logInfo(s"MURS2: $e")
+          }
           return new InterruptibleIterator[T](context, storedValues.get)
         }
 
@@ -81,7 +89,11 @@ private[spark] class CacheManager(blockManager: BlockManager) extends Logging {
           val metrics = context.taskMetrics
           val lastUpdatedBlocks = metrics.updatedBlocks.getOrElse(Seq[(BlockId, BlockStatus)]())
           metrics.updatedBlocks = Some(lastUpdatedBlocks ++ updatedBlocks.toSeq)
-          context.taskMURS().updateTotalRecords(context.taskAttemptId(), cachedValues.size)
+          try {
+            context.taskMURS().updateTotalRecords(context.taskAttemptId(), cachedValues.size)
+          } catch {
+            case e: Exception => logInfo(s"MURS3: $e")
+          }
           new InterruptibleIterator(context, cachedValues)
 
         } finally {
