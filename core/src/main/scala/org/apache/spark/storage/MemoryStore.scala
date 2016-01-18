@@ -287,7 +287,7 @@ private[spark] class MemoryStore(blockManager: BlockManager, memoryManager: Memo
         try {
           val taskMURS = currentTaskMURS()
           if(taskMURS.getSampleFlag(taskId)){
-            taskMURS.updateSampleResult(taskId, vector.estimateSize())
+            taskMURS.updateCacheSampleResult(taskId, vector.estimateSize())
             taskMURS.updateSingleTaskSampleFlag(taskId)
           }
         } catch {

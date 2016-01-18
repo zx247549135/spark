@@ -36,6 +36,7 @@ class MURScheduler(
 
   // the memory usage of each task
   private val taskMemoryUsage = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
+  private val taskCacheMemoryUsage = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
 
   def showMessage(taskId: Long): Unit = {
 
@@ -57,11 +58,12 @@ class MURScheduler(
     val bytesOutput = getValue(taskBytesOutput.get(taskId))
     val bytesShuffleWrite = getValue(taskBytesShuffleWrite.get(taskId))
     val memoryUsage = getValue(taskMemoryUsage.get(taskId))
+    val cacheMemoryUsage = getValue(taskCacheMemoryUsage.get(taskId))
     if(memoryUsage != 0 && taskId % 4 == 0)
-      logInfo(s"Task $taskId has bytes read $bytesRead_input / $bytesRead_shuffle, " +
-        s"records $totalRecords, read records $recordsRead_input / $recordsRead_shuffle, " +
+      logInfo(s"Task $taskId has bytes read $bytesRead_input/$bytesRead_shuffle, " +
+        s"records $totalRecords, read records $recordsRead_input/$recordsRead_shuffle, " +
         s"bytes output $bytesOutput, shuffle write $bytesShuffleWrite, " +
-        s"memory usage $memoryUsage.")
+        s"memory usage $memoryUsage/$cacheMemoryUsage.")
   }
 
   def registerTask(taskId: Long): Unit = {
@@ -74,6 +76,7 @@ class MURScheduler(
     taskBytesOutput.put(taskId, new ArrayBuffer[Long])
     taskBytesShuffleWrite.put(taskId, new ArrayBuffer[Long])
     taskMemoryUsage.put(taskId, new ArrayBuffer[Long])
+    taskCacheMemoryUsage.put(taskId, new ArrayBuffer[Long])
   }
 
   def removeFinishedTask(taskId: Long): Unit = {
@@ -86,6 +89,7 @@ class MURScheduler(
     taskBytesOutput.remove(taskId)
     taskBytesShuffleWrite.remove(taskId)
     taskMemoryUsage.remove(taskId)
+    taskCacheMemoryUsage.remove(taskId)
   }
 
   def registerFinishedTask(taskId: Long): Unit = {
@@ -138,6 +142,13 @@ class MURScheduler(
 
     val taskMemoryUsageBuffer = taskMemoryUsage.get(taskId)
     taskMemoryUsage.replace(taskId, taskMemoryUsageBuffer += sampleResult)
+  }
+
+  def updateCacheSampleResult(taskId: Long, sampleResult: Long): Unit = {
+    updateSingleTaskSampleFlag(taskId)
+
+    val taskCacheMemoryUsageBuffer = taskCacheMemoryUsage.get(taskId)
+    taskCacheMemoryUsage.replace(taskId, taskCacheMemoryUsageBuffer += sampleResult)
   }
 
   /**
