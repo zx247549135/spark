@@ -30,6 +30,7 @@ class MURScheduler(
   // the records which has been read by this task
   private val taskRecordsRead_input = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
   private val taskRecordsRead_shuffle = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
+  private val taskRecordsRead_cache = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
 
   private val taskBytesShuffleWrite = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
   private val taskBytesOutput = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
@@ -55,13 +56,14 @@ class MURScheduler(
     val bytesRead_shuffle = getValue(taskBytesRead_shuffle.get(taskId))
     val recordsRead_input = getValue(taskRecordsRead_input.get(taskId))
     val recordsRead_shuffle = getValue(taskRecordsRead_shuffle.get(taskId))
+    val recordsRead_cache = getValue(taskRecordsRead_cache.get(taskId))
     val bytesOutput = getValue(taskBytesOutput.get(taskId))
     val bytesShuffleWrite = getValue(taskBytesShuffleWrite.get(taskId))
     val memoryUsage = getValue(taskMemoryUsage.get(taskId))
     val cacheMemoryUsage = getValue(taskCacheMemoryUsage.get(taskId))
     if(memoryUsage != 0 && taskId % 4 == 0)
       logInfo(s"Task $taskId has bytes read $bytesRead_input/$bytesRead_shuffle, " +
-        s"records $totalRecords, read records $recordsRead_input/$recordsRead_shuffle, " +
+        s"records $totalRecords, read records $recordsRead_input/$recordsRead_shuffle/$recordsRead_cache, " +
         s"bytes output $bytesOutput, shuffle write $bytesShuffleWrite, " +
         s"memory usage $memoryUsage/$cacheMemoryUsage.")
   }
@@ -73,6 +75,7 @@ class MURScheduler(
     taskBytesRead_shuffle.put(taskId, new ArrayBuffer[Long])
     taskRecordsRead_input.put(taskId, new ArrayBuffer[Long])
     taskRecordsRead_shuffle.put(taskId, new ArrayBuffer[Long])
+    taskRecordsRead_cache.put(taskId, new ArrayBuffer[Long])
     taskBytesOutput.put(taskId, new ArrayBuffer[Long])
     taskBytesShuffleWrite.put(taskId, new ArrayBuffer[Long])
     taskMemoryUsage.put(taskId, new ArrayBuffer[Long])
@@ -86,6 +89,7 @@ class MURScheduler(
     taskBytesRead_shuffle.remove(taskId)
     taskRecordsRead_input.remove(taskId)
     taskRecordsRead_shuffle.remove(taskId)
+    taskRecordsRead_cache.remove(taskId)
     taskBytesOutput.remove(taskId)
     taskBytesShuffleWrite.remove(taskId)
     taskMemoryUsage.remove(taskId)
@@ -106,6 +110,12 @@ class MURScheduler(
 
   def updateTotalRecords(taskId: Long, totalRecords: Long): Unit = {
     runningTasks.replace(taskId, totalRecords)
+  }
+
+  // this method will only be used in cache operation
+  def updateReadRecordsInCache(taskId: Long, readRecords: Long): Unit = {
+    val recordsBuffer = taskRecordsRead_cache.get(taskId)
+    taskRecordsRead_cache.replace(taskId, recordsBuffer += readRecords)
   }
 
   /**

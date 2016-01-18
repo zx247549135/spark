@@ -250,7 +250,7 @@ private[spark] class MemoryStore(blockManager: BlockManager, memoryManager: Memo
    */
   def unrollSafely(
       blockId: BlockId,
-      values: Iterator[Any],
+      values1: Iterator[Any],
       droppedBlocks: ArrayBuffer[(BlockId, BlockStatus)])
     : Either[Array[Any], Iterator[Any]] = {
 
@@ -282,11 +282,17 @@ private[spark] class MemoryStore(blockManager: BlockManager, memoryManager: Memo
 
     // Unroll this block safely, checking whether we have exceeded our threshold periodically
     try {
+      var recordsNum = 0
+      val (values, values2) = values1.duplicate
+      val totalRecords = values2.size
       while (values.hasNext && keepUnrolling) {
         vector += values.next()
+        recordsNum += 1
         try {
           val taskMURS = currentTaskMURS()
           if(taskMURS.getSampleFlag(taskId)){
+            taskMURS.updateTotalRecords(taskId, totalRecords)
+            taskMURS.updateReadRecordsInCache(taskId, recordsNum)
             taskMURS.updateCacheSampleResult(taskId, vector.estimateSize())
             taskMURS.updateSingleTaskSampleFlag(taskId)
           }
