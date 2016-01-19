@@ -171,6 +171,45 @@ class ExternalAppendOnlyMap[K, V, C](
     }
   }
 
+  private var recordsReadByCoGroup = 0L
+
+  def insertAllByCoGroup(entries: Iterator[Product2[K, V]]): Unit = {
+    if (currentMap == null) {
+      throw new IllegalStateException(
+        "Cannot insert new elements into a map after calling iterator")
+    }
+    // An update function for the map that we reuse across entries to avoid allocating
+    // a new closure each time
+    var curEntry: Product2[K, V] = null
+    val update: (Boolean, C) => C = (hadVal, oldVal) => {
+      if (hadVal) mergeValue(oldVal, curEntry._2) else createCombiner(curEntry._2)
+    }
+
+    while (entries.hasNext) {
+      curEntry = entries.next()
+      recordsReadByCoGroup += 1
+      val estimatedSize = currentMap.estimateSize()
+      try {
+        val taskId = context.taskAttemptId()
+        val taskMURS = context.taskMURS()
+        if (taskMURS.getSampleFlag(taskId)) {
+          taskMURS.updateReadRecordsInCoCroup(taskId, recordsReadByCoGroup)
+          taskMURS.updateSampleResult(taskId, estimatedSize)
+        }
+      } catch {
+        case e: Exception => logInfo(s"MURS5: $e")
+      }
+      if (estimatedSize > _peakMemoryUsedBytes) {
+        _peakMemoryUsedBytes = estimatedSize
+      }
+      if (maybeSpill(currentMap, estimatedSize)) {
+        currentMap = new SizeTrackingAppendOnlyMap[K, C]
+      }
+      currentMap.changeValue(curEntry._1, update)
+      addElementsRead()
+    }
+  }
+
   /**
    * Insert the given iterable of keys and values into the map.
    *

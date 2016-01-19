@@ -150,7 +150,7 @@ class CoGroupedRDD[K: ClassTag](
 
     val map = createExternalMap(numRdds)
     for ((it, depNum) <- rddIterators) {
-      map.insertAll(it.map(pair => (pair._1, new CoGroupValue(pair._2, depNum))))
+      map.insertAllByCoGroup(it.map(pair => (pair._1, new CoGroupValue(pair._2, depNum))))
     }
     context.taskMetrics().incMemoryBytesSpilled(map.memoryBytesSpilled)
     context.taskMetrics().incDiskBytesSpilled(map.diskBytesSpilled)
