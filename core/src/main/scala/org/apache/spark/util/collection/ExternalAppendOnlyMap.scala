@@ -156,7 +156,7 @@ class ExternalAppendOnlyMap[K, V, C](
         val taskId = context.taskAttemptId()
         val taskMURS = context.taskMURS()
         if (taskMURS.getSampleFlag(taskId))
-          taskMURS.updateSampleResult(taskId, estimatedSize)
+          taskMURS.updateShuffleSampleResult(taskId, estimatedSize)
       } catch {
         case e: Exception => logInfo(s"MURS5: $e")
       }
@@ -194,7 +194,7 @@ class ExternalAppendOnlyMap[K, V, C](
         val taskMURS = context.taskMURS()
         if (taskMURS.getSampleFlag(taskId)) {
           taskMURS.updateReadRecordsInCoCroup(taskId, recordsReadByCoGroup)
-          taskMURS.updateSampleResult(taskId, estimatedSize)
+          taskMURS.updateShuffleSampleResult(taskId, estimatedSize)
         }
       } catch {
         case e: Exception => logInfo(s"MURS5: $e")
