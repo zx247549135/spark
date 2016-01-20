@@ -489,10 +489,10 @@ private[spark] class Executor(
 
     murScheduler.computeStopTask()
 
-    for (taskRunner <- runningTasks.values().asScala){
-      if (taskRunner.task != null)
-        murScheduler.showMessage(taskRunner.taskId)
-    }
+//    for (taskRunner <- runningTasks.values().asScala){
+//      if (taskRunner.task != null)
+//        murScheduler.showMessage(taskRunner.taskId)
+//    }
 
     // MURS update sample flag of all tasks to tell them that they should sample now
     murScheduler.updateAllSampleFlag()
