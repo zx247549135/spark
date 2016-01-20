@@ -26,7 +26,7 @@ import org.apache.spark.annotation.DeveloperApi
  */
 @DeveloperApi
 class InterruptibleIterator[+T](val context: TaskContext, val delegate: Iterator[T])
-  extends Iterator[T] {
+  extends Iterator[T] with Logging {
 
   def hasNext: Boolean = {
     // TODO(aarondav/rxin): Check Thread.interrupted instead of context.interrupted if interrupt
@@ -36,6 +36,10 @@ class InterruptibleIterator[+T](val context: TaskContext, val delegate: Iterator
     if (context.isInterrupted) {
       throw new TaskKilledException
     } else {
+      while(context.isMURStop()){
+        logInfo("Stop Task: " + context.taskAttemptId())
+        Thread.sleep(200)
+      }
       delegate.hasNext
     }
   }

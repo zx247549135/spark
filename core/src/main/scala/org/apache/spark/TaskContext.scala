@@ -195,6 +195,8 @@ abstract class TaskContext extends Serializable {
    */
   private[spark] def taskMURS(): MURScheduler
 
+  private[spark] def isMURStop(): Boolean
+
   /**
    * Accumulators for tracking internal metrics indexed by the name.
    */

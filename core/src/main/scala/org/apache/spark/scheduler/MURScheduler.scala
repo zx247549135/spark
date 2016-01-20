@@ -19,7 +19,10 @@ class MURScheduler(
   // the second value of runningTasks save the total records of this task
   private val runningTasks = new ConcurrentHashMap[Long, String]
   private val finishedTasks = new ArrayBuffer[Long]()
-  private val mursStopTasks = new ArrayBuffer[Long]()
+
+  private val mursRecommendStopTasks = new ConcurrentHashMap[Int, Long]
+  private val stopIndex = 1
+  private val mursStopTasks = new ConcurrentHashMap[Long, Int]
 
   private val runningTasksSampleFlag = new ConcurrentHashMap[Long, Boolean]
 
@@ -62,6 +65,7 @@ class MURScheduler(
   }
 
   def removeFinishedTask(taskId: Long): Unit = {
+    removeStopTask()
     runningTasks.remove(taskId)
     runningTasksSampleFlag.remove(taskId)
     taskMURSample.removeFinishedTask(taskId)
@@ -79,17 +83,9 @@ class MURScheduler(
   def updateReadRecordsInCoCroup(taskId: Long, readRecords: Long) =
     taskMURSample.updateReadRecordsInCoCroup(taskId, readRecords)
 
-  /**
-   * Follow functions are used to control the sample in tasks
-   */
-
   def getSampleFlag(taskId: Long): Boolean = {
     runningTasksSampleFlag.get(taskId)
   }
-
-  /**
-   * This method is called by MURS thread in interval times.
-   */
 
   def updateAllSampleFlag(): Unit = {
     val keyIter = runningTasksSampleFlag.keySet.iterator()
@@ -115,5 +111,33 @@ class MURScheduler(
     taskMURSample.updateTaskInformation(taskId, taskMetrics)
   }
 
+  def addStopTask(taskId: Long): Unit ={
+    mursStopTasks.put(taskId, stopIndex)
+  }
+
+  def removeStopTask(taskId: Long): Unit ={
+    mursStopTasks.remove(taskId)
+  }
+
+  def removeStopTask(): Unit ={
+    mursStopTasks.clear()
+  }
+
+  def shouldStop(taskId: Long): Boolean = mursStopTasks.containsKey(taskId)
+
+  def addRecommendStopTask(taskId: Long, stopLevel: Int): Unit = {
+    mursRecommendStopTasks.put(stopLevel, taskId)
+    addStopTask(taskId)
+  }
+
+  def computeStopTask(): Unit ={
+    val keyIterator = runningTasks.keySet().iterator()
+    while(keyIterator.hasNext){
+      val taskIdWithKey = keyIterator.next()
+      if(taskIdWithKey % 300 == 0){
+        addRecommendStopTask(taskIdWithKey, 1)
+      }
+    }
+  }
 
 }

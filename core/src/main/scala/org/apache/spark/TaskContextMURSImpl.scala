@@ -30,5 +30,7 @@ private[spark] class TaskContextMURSImpl (
     taskMetrics)
   with Logging {
 
+  override def isMURStop() = taskMURS.shouldStop(taskAttemptId)
+
   }
 

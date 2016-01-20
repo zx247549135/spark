@@ -487,6 +487,8 @@ private[spark] class Executor(
    */
   private def updateMURSMessages(): Unit = {
 
+    murScheduler.computeStopTask()
+
     for (taskRunner <- runningTasks.values().asScala){
       if (taskRunner.task != null)
         murScheduler.showMessage(taskRunner.taskId)

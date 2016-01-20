@@ -101,6 +101,8 @@ private[spark] class TaskContextImpl(
 
   override def isInterrupted(): Boolean = interrupted
 
+  override def isMURStop(): Boolean = false
+
   override def getMetricsSources(sourceName: String): Seq[Source] =
     metricsSystem.getSourcesByName(sourceName)
 
