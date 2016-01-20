@@ -144,7 +144,7 @@ private[spark] class Executor(
     heartbeater.shutdown()
     heartbeater.awaitTermination(10, TimeUnit.SECONDS)
     mursRunThread.shutdown()
-    mursRunThread.awaitTermination(500, TimeUnit.MILLISECONDS)
+    mursRunThread.awaitTermination(100, TimeUnit.MILLISECONDS)
     threadPool.shutdown()
     if (!isLocal) {
       env.stop()
