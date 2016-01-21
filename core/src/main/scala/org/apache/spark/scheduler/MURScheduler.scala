@@ -30,7 +30,7 @@ class MURScheduler(
 
   /**
    * Show sample message of one task
-   * @param taskId
+   * 
    */
 
   def showMessage(taskId: Long): Unit = {
@@ -71,17 +71,14 @@ class MURScheduler(
     taskMURSample.removeFinishedTask(taskId)
   }
 
-  // Before the task read it's input, we update the total records first
-  def updateTotalRecords(taskId: Long, totalRecords: Long) =
-    taskMURSample.updateTotalRecords(taskId, totalRecords)
-
-  // this method will only be used in cache operation
-  def updateReadRecordsInCache(taskId: Long, readRecords: Long) =
-    taskMURSample.updateReadRecordsInCache(taskId, readRecords)
-
-  // this method will only be used in cogroup operation
-  def updateReadRecordsInCoCroup(taskId: Long, readRecords: Long) =
-    taskMURSample.updateReadRecordsInCoCroup(taskId, readRecords)
+  /**
+   *  1. Executor use [updateAllSampleFlag] to update the sample flag of all running tasks.
+   *  2. While the running tasks use [getSampleFlag] to decide whether they should do sample
+   *  and report the results.
+   *  3. After they report the results, they use [updateSingleTaskSampleFlag] to tell
+   *  the Scheduler they have finish themselves.
+   *
+   */
 
   def getSampleFlag(taskId: Long): Boolean = {
     runningTasksSampleFlag.get(taskId)
@@ -97,6 +94,23 @@ class MURScheduler(
     runningTasksSampleFlag.replace(taskId, false)
   }
 
+  /**
+   * All these update* functions are used to invoke the function of taskMURSample
+   * because all result are stored in the taskMURSample.
+   */
+
+  // Before the task read it's input, we update the total records first
+  def updateTotalRecords(taskId: Long, totalRecords: Long) =
+    taskMURSample.updateTotalRecords(taskId, totalRecords)
+
+  // this method will only be used in cache operation
+  def updateReadRecordsInCache(taskId: Long, readRecords: Long) =
+    taskMURSample.updateReadRecordsInCache(taskId, readRecords)
+
+  // this method will only be used in cogroup operation
+  def updateReadRecordsInCoCroup(taskId: Long, readRecords: Long) =
+    taskMURSample.updateReadRecordsInCoCroup(taskId, readRecords)
+
   def updateShuffleSampleResult(taskId: Long, sampleResult: Long): Unit = {
     updateSingleTaskSampleFlag(taskId)
     taskMURSample.updateShuffleSampleResult(taskId, sampleResult)
@@ -110,6 +124,11 @@ class MURScheduler(
   def updateTaskInformation(taskId: Long, taskMetrics: TaskMetrics): Unit = {
     taskMURSample.updateTaskInformation(taskId, taskMetrics)
   }
+
+  /**
+   * Scheduler Implementation
+   *
+   */
 
   def addStopTask(taskId: Long): Unit ={
     mursStopTasks.put(taskId, stopIndex)
