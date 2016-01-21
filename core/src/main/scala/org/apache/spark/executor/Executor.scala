@@ -291,6 +291,7 @@ private[spark] class Executor(
           }
         }
 
+        murScheduler.removeFinishedTask(taskId)
         execBackend.statusUpdate(taskId, TaskState.FINISHED, serializedResult)
 
       } catch {
@@ -339,7 +340,6 @@ private[spark] class Executor(
 
       } finally {
         runningTasks.remove(taskId)
-        murScheduler.removeFinishedTask(taskId)
       }
     }
   }

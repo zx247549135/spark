@@ -30,7 +30,7 @@ class MURScheduler(
 
   /**
    * Show sample message of one task
-   * 
+   *
    */
 
   def showMessage(taskId: Long): Unit = {
