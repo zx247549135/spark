@@ -93,6 +93,10 @@ private[spark] class CoarseGrainedExecutorBackend(
       } else {
         val taskDesc = ser.deserialize[TaskDescription](data.value)
         logInfo("Got assigned task " + taskDesc.taskId)
+        while( executor.hasStopTasks() ){
+          Thread.sleep(50)
+          logInfo("But executor has stop tasks. Waiting!")
+        }
         executor.launchTask(this, taskId = taskDesc.taskId, attemptNumber = taskDesc.attemptNumber,
           taskDesc.name, taskDesc.serializedTask)
       }

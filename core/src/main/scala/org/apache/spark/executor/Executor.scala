@@ -120,6 +120,8 @@ private[spark] class Executor(
 
   startExecutorMURSSampling()
 
+  def hasStopTasks(): Boolean = murScheduler.hasStopTask()
+
   def launchTask(
       context: ExecutorBackend,
       taskId: Long,
@@ -185,10 +187,6 @@ private[spark] class Executor(
     }
 
     override def run(): Unit = {
-
-      while(murScheduler.hasStopTask()){
-        Thread.sleep(50)
-      }
 
       val taskMemoryManager = new TaskMemoryManager(env.memoryManager, taskId)
       val deserializeStartTime = System.currentTimeMillis()
