@@ -125,6 +125,8 @@ class MURScheduler(
 
   def shouldStop(taskId: Long): Boolean = mursStopTasks.containsKey(taskId)
 
+  def hasStopTask(): Boolean = !mursStopTasks.isEmpty
+
   def addRecommendStopTask(taskId: Long, stopLevel: Int): Unit = {
     mursRecommendStopTasks.put(stopLevel, taskId)
     addStopTask(taskId)

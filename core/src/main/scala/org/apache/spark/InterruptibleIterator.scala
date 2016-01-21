@@ -38,7 +38,7 @@ class InterruptibleIterator[+T](val context: TaskContext, val delegate: Iterator
     } else {
       while(context.isMURStop()){
         logInfo("Stop Task: " + context.taskAttemptId())
-        Thread.sleep(200)
+        Thread.sleep(50)
       }
       delegate.hasNext
     }

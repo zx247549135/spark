@@ -128,6 +128,9 @@ private[spark] class Executor(
       serializedTask: ByteBuffer): Unit = {
     val tr = new TaskRunner(context, taskId = taskId, attemptNumber = attemptNumber, taskName,
       serializedTask)
+    while(murScheduler.hasStopTask()){
+      Thread.sleep(50)
+    }
     runningTasks.put(taskId, tr)
     threadPool.execute(tr)
   }
