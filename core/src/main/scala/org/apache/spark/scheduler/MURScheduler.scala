@@ -139,6 +139,7 @@ class MURScheduler(
   }
 
   def removeStopTask(): Unit ={
+    logInfo("Remove all stop tasks.")
     mursStopTasks.clear()
   }
 
