@@ -152,12 +152,15 @@ class MURScheduler(
     addStopTask(taskId)
   }
 
+  private var testFlag = true
+
   def computeStopTask(): Unit ={
     val keyIterator = runningTasks.keySet().iterator()
     while(keyIterator.hasNext){
       val taskIdWithKey = keyIterator.next()
-      if(taskIdWithKey % 300 == 0){
+      if(taskIdWithKey % 300 == 0 && testFlag){
         addRecommendStopTask(taskIdWithKey, 1)
+        testFlag = false
       }
     }
   }
