@@ -211,6 +211,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
         val executorData = executorDataMap(executorId)
         val workOffers = Seq(
           new WorkerOffer(executorId, executorData.executorHost, executorData.freeCores))
+        logInfo("Launch task nums: " + executorData.freeCores)
         launchTasks(scheduler.resourceOffers(workOffers))
       }
     }
