@@ -209,9 +209,11 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
       // Filter out executors under killing
       if (executorIsAlive(executorId)) {
         val executorData = executorDataMap(executorId)
+        val multiTasks = conf.getDouble("spark.murs.multiTasks", 1.5)
+        val multiTaskCores = executorData.freeCores * multiTasks
         val workOffers = Seq(
-          new WorkerOffer(executorId, executorData.executorHost, executorData.freeCores))
-        logInfo("Launch task nums: " + executorData.freeCores)
+          new WorkerOffer(executorId, executorData.executorHost, multiTaskCores.toInt))
+        logInfo("Launch task nums: " + executorData.freeCores + "/" + multiTaskCores.toInt)
         launchTasks(scheduler.resourceOffers(workOffers))
       }
     }
