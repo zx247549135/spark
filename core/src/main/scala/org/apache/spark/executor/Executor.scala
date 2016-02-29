@@ -116,7 +116,7 @@ private[spark] class Executor(
   startDriverHeartbeater()
 
   private val mursRunThread = ThreadUtils.newDaemonSingleThreadScheduledExecutor("excutor-mursSampling")
-  private val murScheduler = new MURScheduler(executorId)
+  private val murScheduler = new MURScheduler(executorId, conf)
 
   startExecutorMURSSampling()
 
@@ -489,8 +489,6 @@ private[spark] class Executor(
    * update the messages of all tasks in the executor, and judge the available of MURS
    */
   private def updateMURSMessages(): Unit = {
-
-    logInfo("Running tasks num: " + runningTasks.size())
 
 //    for (taskRunner <- runningTasks.values().asScala){
 //      if (taskRunner.task != null)
