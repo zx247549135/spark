@@ -216,8 +216,10 @@ class MURSchedulerSample extends Serializable with Logging{
   def getAllMemoryUsage(): Array[Long] = {
     val result = new Array[Long](currentTasksMemoryUseType.size())
     var index = 0
-    for((taskId, inputBytesType) <- currentTasksMemoryUseType){
-      inputBytesType match {
+    val keyIterator = currentTasksMemoryUseType.keySet().iterator()
+    while(keyIterator.hasNext){
+      val taskId = keyIterator.next()
+      currentTasksMemoryUseType.get(taskId) match{
         case 0 => result.update(index, taskShuffleMemoryUsage.get(taskId).last)
         case 1 => result.update(index, taskCacheMemoryUsage.get(taskId).last)
       }
