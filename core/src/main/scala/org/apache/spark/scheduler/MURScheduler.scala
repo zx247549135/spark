@@ -16,8 +16,8 @@ import scala.collection.mutable.ArrayBuffer
 class MURScheduler(
      executorId: String) extends Serializable with Logging {
 
-  // the second value of runningTasks save the total records of this task
-  private val runningTasks = new ConcurrentHashMap[Long, String]
+  // the second value of runningTasks save the taskType(shuffle, result) of this task
+  private val runningTasks = new ConcurrentHashMap[Long, Int]
   private val finishedTasks = new ArrayBuffer[Long]()
 
   private val mursRecommendStopTasks = new ConcurrentHashMap[Int, Long]
@@ -59,7 +59,7 @@ class MURScheduler(
   }
 
   def registerTask(taskId: Long): Unit = {
-    runningTasks.put(taskId, "NULL")
+    runningTasks.put(taskId, 0)
     runningTasksSampleFlag.put(taskId, false)
     taskMURSample.registerTask(taskId)
   }
@@ -152,16 +152,20 @@ class MURScheduler(
     addStopTask(taskId)
   }
 
-  private var testFlag = true
-
   def computeStopTask(): Unit ={
+    val totalRecords = taskMURSample.getAllTotalRecordsRead()
+    val inputRecords = taskMURSample.getAllRecordsRead()
+    val inputBytes = taskMURSample.getAllBytesRead()
+    val memoryUsage = taskMURSample.getAllMemoryUsage()
     val keyIterator = runningTasks.keySet().iterator()
+    var index = 0
     while(keyIterator.hasNext){
-      val taskIdWithKey = keyIterator.next()
-      if(taskIdWithKey % 300 == 0 && testFlag){
-        addRecommendStopTask(taskIdWithKey, 1)
-        testFlag = false
-      }
+      val key = keyIterator.next()
+      if(key % 4 == 0)
+        logInfo("Memory usage information: " + inputRecords(index) + "/" + totalRecords(index) +
+          "; " + inputBytes(index) +
+          "; " + memoryUsage(index))
+      index += 1
     }
   }
 

@@ -112,8 +112,6 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
         if (TaskState.isFinished(state)) {
           executorDataMap.get(executorId) match {
             case Some(executorInfo) =>
-              if(executorInfo.mursCores < executorInfo.totalCores)
-                executorInfo.freeCores += scheduler.CPUS_PER_TASK
               executorInfo.mursCores += scheduler.CPUS_PER_TASK
               makeOffers(executorId)
             case None =>
@@ -215,7 +213,6 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
         val executorData = executorDataMap(executorId)
         val workOffers = Seq(
           new WorkerOffer(executorId, executorData.executorHost, executorData.mursCores))
-        logInfo("Free cores: " + executorData.freeCores + "/" + executorData.mursCores)
         launchTasks(scheduler.resourceOffers(workOffers))
       }
     }
@@ -245,8 +242,6 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
         }
         else {
           val executorData = executorDataMap(task.executorId)
-          if(executorData.mursCores <= executorData.totalCores)
-            executorData.freeCores -= scheduler.CPUS_PER_TASK
           executorData.mursCores -= scheduler.CPUS_PER_TASK
           executorData.executorEndpoint.send(LaunchTask(new SerializableBuffer(serializedTask)))
         }

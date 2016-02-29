@@ -32,6 +32,13 @@ class MURSchedulerSample extends Serializable with Logging{
   private val taskShuffleMemoryUsage = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
   private val taskCacheMemoryUsage = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
 
+
+  private val currentTasksBytesInputType = new ConcurrentHashMap[Long, Int]
+  // The input type of this task is from input disk/ cache block/ shuffle read/ cogroup
+  private val currentTasksRecordsInputType = new ConcurrentHashMap[Long, Int]
+  // The memory usage type can be shuffle and cache
+  private val currentTasksMemoryUseType = new ConcurrentHashMap[Long, Int]
+
   def registerTask(taskId: Long): Unit = {
     taskBytesRead_input.put(taskId, new ArrayBuffer[Long])
     taskBytesRead_shuffle.put(taskId, new ArrayBuffer[Long])
@@ -47,6 +54,10 @@ class MURSchedulerSample extends Serializable with Logging{
 
     taskShuffleMemoryUsage.put(taskId, new ArrayBuffer[Long])
     taskCacheMemoryUsage.put(taskId, new ArrayBuffer[Long])
+
+    currentTasksBytesInputType.put(taskId, 0)
+    currentTasksRecordsInputType.put(taskId, 0)
+    currentTasksMemoryUseType.put(taskId, 0)
   }
 
   def removeFinishedTask(taskId: Long): Unit ={
@@ -64,6 +75,10 @@ class MURSchedulerSample extends Serializable with Logging{
 
     taskShuffleMemoryUsage.remove(taskId)
     taskCacheMemoryUsage.remove(taskId)
+
+    currentTasksBytesInputType.remove(taskId)
+    currentTasksRecordsInputType.remove(taskId)
+    currentTasksMemoryUseType.remove(taskId)
   }
 
   def updateTotalRecords(taskId: Long, totalRecords: Long): Unit = {
@@ -73,11 +88,13 @@ class MURSchedulerSample extends Serializable with Logging{
   def updateReadRecordsInCache(taskId: Long, readRecords: Long): Unit = {
     val recordsBuffer = taskRecordsRead_cache.get(taskId)
     taskRecordsRead_cache.replace(taskId, recordsBuffer += readRecords)
+    currentTasksRecordsInputType.replace(taskId, 2)
   }
 
   def updateReadRecordsInCoCroup(taskId: Long, readRecords: Long): Unit = {
     val recordsBuffer = taskRecordsRead_cogroup.get(taskId)
     taskRecordsRead_cogroup.replace(taskId, recordsBuffer += readRecords)
+    currentTasksRecordsInputType.replace(taskId, 3)
   }
 
   def updateShuffleSampleResult(taskId: Long, sampleResult: Long): Unit = {
@@ -88,6 +105,7 @@ class MURSchedulerSample extends Serializable with Logging{
   def updateCacheSampleResult(taskId: Long, sampleResult: Long): Unit = {
     val taskCacheMemoryUsageBuffer = taskCacheMemoryUsage.get(taskId)
     taskCacheMemoryUsage.replace(taskId, taskCacheMemoryUsageBuffer += sampleResult)
+    currentTasksMemoryUseType.replace(taskId, 1)
   }
 
   def updateTaskInformation(taskId: Long, taskMetrics: TaskMetrics): Unit = {
@@ -101,7 +119,9 @@ class MURSchedulerSample extends Serializable with Logging{
     }
     if(taskMetrics.shuffleReadMetrics.isDefined) {
       bytesRead_shuffle = taskMetrics.shuffleReadMetrics.get.totalBytesRead
+      currentTasksBytesInputType.replace(taskId, 1)
       recordsRead_shuffle = taskMetrics.shuffleReadMetrics.get.recordsRead
+      currentTasksRecordsInputType.replace(taskId, 1)
     }
 
     var bytesOutput = 0L
@@ -148,5 +168,56 @@ class MURSchedulerSample extends Serializable with Logging{
 
   def getShuffleMemoryUsage(taskId: Long) = getValue(taskShuffleMemoryUsage.get(taskId))
   def getCacheMemoryUsage(taskId: Long) = getValue(taskCacheMemoryUsage.get(taskId))
+
+  def getAllBytesRead(): Array[Long] = {
+    val result = new Array[Long](currentTasksBytesInputType.size())
+    var index = 0
+    for((taskId, inputBytesType) <- currentTasksBytesInputType){
+      inputBytesType match {
+        case 0 => result.update(index, taskBytesRead_input.get(taskId).last)
+        case 1 => result.update(index, taskBytesRead_shuffle.get(taskId).last)
+      }
+      index += 1
+    }
+    result
+  }
+
+  def getAllRecordsRead(): Array[Long] = {
+    val result = new Array[Long](currentTasksRecordsInputType.size())
+    var index = 0
+    for((taskId, inputBytesType) <- currentTasksRecordsInputType){
+      inputBytesType match {
+        case 0 => result.update(index, taskRecordsRead_input.get(taskId).last)
+        case 1 => result.update(index, taskRecordsRead_shuffle.get(taskId).last)
+        case 2 => result.update(index, taskRecordsRead_cache.get(taskId).last)
+        case 3 => result.update(index, taskRecordsRead_cogroup.get(taskId).last)
+      }
+      index += 1
+    }
+    result
+  }
+
+  def getAllTotalRecordsRead(): Array[Long] = {
+    val result = new Array[Long](taskTotalRecords.size())
+    var index = 0
+    for(taskTotalRecordsArray <- taskTotalRecords.elements()){
+      result.update(index, taskTotalRecordsArray)
+      index += 1
+    }
+    result
+  }
+
+  def getAllMemoryUsage(): Array[Long] = {
+    val result = new Array[Long](currentTasksMemoryUseType.size())
+    var index = 0
+    for((taskId, inputBytesType) <- currentTasksMemoryUseType){
+      inputBytesType match {
+        case 0 => result.update(index, taskShuffleMemoryUsage.get(taskId).last)
+        case 1 => result.update(index, taskCacheMemoryUsage.get(taskId).last)
+      }
+      index += 1
+    }
+    result
+  }
 
 }
