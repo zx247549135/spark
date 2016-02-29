@@ -177,7 +177,7 @@ class MURSchedulerSample extends Serializable with Logging{
       val taskId = keyIterator.next()
       currentTasksBytesInputType.get(taskId) match{
         case 0 => result.update(index, getValue(taskBytesRead_input.get(taskId)))
-        case 1 => result.update(index, getValue(taskBytesRead_shuffle.get(taskId))
+        case 1 => result.update(index, getValue(taskBytesRead_shuffle.get(taskId)))
       }
       index += 1
     }
