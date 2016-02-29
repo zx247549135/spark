@@ -172,8 +172,10 @@ class MURSchedulerSample extends Serializable with Logging{
   def getAllBytesRead(): Array[Long] = {
     val result = new Array[Long](currentTasksBytesInputType.size())
     var index = 0
-    for((taskId, inputBytesType) <- currentTasksBytesInputType){
-      inputBytesType match {
+    val keyIterator = currentTasksBytesInputType.keySet().iterator()
+    while(keyIterator.hasNext){
+      val taskId = keyIterator.next()
+      currentTasksBytesInputType.get(taskId) match{
         case 0 => result.update(index, taskBytesRead_input.get(taskId).last)
         case 1 => result.update(index, taskBytesRead_shuffle.get(taskId).last)
       }
@@ -185,8 +187,10 @@ class MURSchedulerSample extends Serializable with Logging{
   def getAllRecordsRead(): Array[Long] = {
     val result = new Array[Long](currentTasksRecordsInputType.size())
     var index = 0
-    for((taskId, inputBytesType) <- currentTasksRecordsInputType){
-      inputBytesType match {
+    val keyIterator = currentTasksRecordsInputType.keySet().iterator()
+    while(keyIterator.hasNext){
+      val taskId = keyIterator.next()
+      currentTasksRecordsInputType.get(taskId) match{
         case 0 => result.update(index, taskRecordsRead_input.get(taskId).last)
         case 1 => result.update(index, taskRecordsRead_shuffle.get(taskId).last)
         case 2 => result.update(index, taskRecordsRead_cache.get(taskId).last)
@@ -200,8 +204,10 @@ class MURSchedulerSample extends Serializable with Logging{
   def getAllTotalRecordsRead(): Array[Long] = {
     val result = new Array[Long](taskTotalRecords.size())
     var index = 0
-    for(taskTotalRecordsArray <- taskTotalRecords.elements()){
-      result.update(index, taskTotalRecordsArray)
+    val keyIterator = taskTotalRecords.keySet().iterator()
+    while(keyIterator.hasNext){
+      val taskId = keyIterator.next()
+      result.update(index, taskTotalRecords.get(taskId))
       index += 1
     }
     result
