@@ -491,7 +491,6 @@ private[spark] class Executor(
   private def updateMURSMessages(): Unit = {
 
     logInfo("Running tasks num: " + runningTasks.size())
-    murScheduler.computeStopTask()
 
 //    for (taskRunner <- runningTasks.values().asScala){
 //      if (taskRunner.task != null)
@@ -528,6 +527,8 @@ private[spark] class Executor(
         }
       }
     }
+
+    murScheduler.computeStopTask()
   }
 
   /**
