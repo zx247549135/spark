@@ -151,7 +151,9 @@ class MURSchedulerSample extends Serializable with Logging{
   def getTotalRecords(taskId: Long) = taskTotalRecords.get(taskId)
 
   def getValue(valueBuffer: ArrayBuffer[Long]): Long = {
-    if (valueBuffer.length != 0 )
+    if (valueBuffer == null)
+      0L
+    else if (valueBuffer.length != 0 )
       valueBuffer.last
     else
       0L

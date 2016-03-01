@@ -158,7 +158,7 @@ class MURScheduler(
     val inputBytes = taskMURSample.getAllBytesRead()
     val memoryUsage = taskMURSample.getAllMemoryUsage()
     val memoryManager = env.memoryManager
-    val totalMemory = conf.getSizeAsBytes("spark.executor.memory")
+    val totalMemory = memoryManager.maxStorageMemory
     val memoryFraction = conf.getDouble("spark.memory.fraction", 0.75)
     val sum = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
     val yellowLine = conf.getDouble("spark.murs.yellow", 0.4)
