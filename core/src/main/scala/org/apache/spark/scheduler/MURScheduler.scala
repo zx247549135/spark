@@ -163,7 +163,8 @@ class MURScheduler(
     val sum = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
     val yellowLine = conf.getDouble("spark.murs.yellow", 0.4)
     val yellowMemoryUsage = (totalMemory * memoryFraction * yellowLine).toLong
-    if(sum > yellowMemoryUsage && !hasStopTask()){
+    //if(sum > yellowMemoryUsage && !hasStopTask()){
+    if(!hasStopTask()){
       logInfo(s"Memory pressure must be optimized.($sum/$yellowMemoryUsage/$totalMemory)")
       var minMemoryUsageIndex = 0
       for (i <- 0 until tasks.length) {

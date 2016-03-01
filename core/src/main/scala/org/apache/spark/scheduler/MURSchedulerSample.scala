@@ -133,8 +133,10 @@ class MURSchedulerSample extends Serializable with Logging{
       bytesShuffleWrite = taskMetrics.shuffleWriteMetrics.get.shuffleBytesWritten
 
     def appendValue(mapWithBuffer: ConcurrentHashMap[Long, ArrayBuffer[Long]], value: Long): Unit = {
-      val valueBuffer = mapWithBuffer.get(taskId)
-      mapWithBuffer.replace(taskId, valueBuffer += value)
+      if(mapWithBuffer.containsKey(taskId)) {
+        val valueBuffer = mapWithBuffer.get(taskId)
+        mapWithBuffer.replace(taskId, valueBuffer += value)
+      }
     }
 
     appendValue(taskBytesRead_input, bytesRead_input)
