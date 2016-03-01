@@ -153,27 +153,26 @@ class MURScheduler(
   }
 
   def computeStopTask(): Unit ={
-    val totalRecords = taskMURSample.getAllTotalRecordsRead()
+    val (tasks, totalRecords) = taskMURSample.getAllTotalRecordsRead()
     val inputRecords = taskMURSample.getAllRecordsRead()
     val inputBytes = taskMURSample.getAllBytesRead()
     val memoryUsage = taskMURSample.getAllMemoryUsage()
-    val keyIterator = runningTasks.keySet().iterator()
-    var index = 0
-    while(keyIterator.hasNext){
-      val key = keyIterator.next()
-      if(key % 4 == 0)
-        logInfo(s"Memory usage information of $key: " + inputRecords(index) + "/" + totalRecords(index) +
-          "; " + inputBytes(index) +
-          "; " + memoryUsage(index))
-      index += 1
-    }
     val totalMemory = conf.getSizeAsBytes("spark.executor.memory")
     val memoryFraction = conf.getDouble("spark.memory.fraction", 0.75)
     val sum = memoryUsage.sum
-    val yellowLine = 0.6
+    val yellowLine = conf.getDouble("spark.murs.yellow", 0.2)
     val yellowMemoryUsage = (totalMemory * memoryFraction * yellowLine).toLong
-    if(sum > yellowMemoryUsage){
+    if(sum > yellowMemoryUsage && !hasStopTask()){
       logInfo(s"Memory pressure must be optimized.($sum/$yellowMemoryUsage/$totalMemory)")
+      var minMemoryUsageIndex = 0
+      for (i <- 0 until tasks.length) {
+        if (memoryUsage(i) < memoryUsage(minMemoryUsageIndex))
+          minMemoryUsageIndex = i
+      }
+      val recommandStopTask = tasks(minMemoryUsageIndex)
+      if(runningTasks.containsKey(recommandStopTask)){
+        addStopTask(tasks(minMemoryUsageIndex))
+      }
     }
   }
 
