@@ -116,7 +116,7 @@ private[spark] class Executor(
   startDriverHeartbeater()
 
   private val mursRunThread = ThreadUtils.newDaemonSingleThreadScheduledExecutor("excutor-mursSampling")
-  private val murScheduler = new MURScheduler(executorId, conf)
+  private val murScheduler = new MURScheduler(executorId, conf, env)
 
   startExecutorMURSSampling()
 

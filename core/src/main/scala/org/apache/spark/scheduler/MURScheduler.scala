@@ -2,7 +2,7 @@ package org.apache.spark.scheduler
 
 import java.util.concurrent.ConcurrentHashMap
 
-import org.apache.spark.{SparkConf, Logging}
+import org.apache.spark.{SparkEnv, SparkConf, Logging}
 import org.apache.spark.executor.TaskMetrics
 import org.apache.spark.memory.TaskMemoryManager
 
@@ -14,7 +14,7 @@ import scala.collection.mutable.ArrayBuffer
  * This Scheduler is based on Memory-Usage-Rate, and running on executor.
  */
 class MURScheduler(
-     executorId: String, conf: SparkConf) extends Serializable with Logging {
+     executorId: String, conf: SparkConf, env: SparkEnv) extends Serializable with Logging {
 
   // the second value of runningTasks save the taskType(shuffle, result) of this task
   private val runningTasks = new ConcurrentHashMap[Long, Int]
@@ -157,10 +157,11 @@ class MURScheduler(
     val inputRecords = taskMURSample.getAllRecordsRead()
     val inputBytes = taskMURSample.getAllBytesRead()
     val memoryUsage = taskMURSample.getAllMemoryUsage()
+    val memoryManager = env.memoryManager
     val totalMemory = conf.getSizeAsBytes("spark.executor.memory")
     val memoryFraction = conf.getDouble("spark.memory.fraction", 0.75)
-    val sum = memoryUsage.sum
-    val yellowLine = conf.getDouble("spark.murs.yellow", 0.2)
+    val sum = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
+    val yellowLine = conf.getDouble("spark.murs.yellow", 0.4)
     val yellowMemoryUsage = (totalMemory * memoryFraction * yellowLine).toLong
     if(sum > yellowMemoryUsage && !hasStopTask()){
       logInfo(s"Memory pressure must be optimized.($sum/$yellowMemoryUsage/$totalMemory)")
