@@ -166,15 +166,15 @@ class MURScheduler(
     //if(sum > yellowMemoryUsage && !hasStopTask()){
     if(!hasStopTask()){
       logInfo(s"Memory pressure must be optimized.($sum/$yellowMemoryUsage/$totalMemory)")
-      var minMemoryUsageIndex = 0
-      for (i <- 0 until tasks.length) {
-        if (memoryUsage(i) < memoryUsage(minMemoryUsageIndex))
-          minMemoryUsageIndex = i
-      }
-      val recommandStopTask = tasks(minMemoryUsageIndex)
-      if(runningTasks.containsKey(recommandStopTask)){
-        addStopTask(tasks(minMemoryUsageIndex))
-      }
+//      var minMemoryUsageIndex = 0
+//      for (i <- 0 until tasks.length) {
+//        if (memoryUsage(i) < memoryUsage(minMemoryUsageIndex))
+//          minMemoryUsageIndex = i
+//      }
+//      val recommandStopTask = tasks(minMemoryUsageIndex)
+//      if(runningTasks.containsKey(recommandStopTask)){
+//        addStopTask(tasks(minMemoryUsageIndex))
+//      }
     }
   }
 
