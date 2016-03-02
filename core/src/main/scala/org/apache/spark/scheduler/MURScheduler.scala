@@ -153,28 +153,28 @@ class MURScheduler(
   }
 
   def computeStopTask(): Unit ={
-    val (tasks, totalRecords) = taskMURSample.getAllTotalRecordsRead()
-    val inputRecords = taskMURSample.getAllRecordsRead()
-    val inputBytes = taskMURSample.getAllBytesRead()
-    val memoryUsage = taskMURSample.getAllMemoryUsage()
     val memoryManager = env.memoryManager
-    val totalMemory = memoryManager.maxStorageMemory
+    val freeStorageMemory = memoryManager.maxStorageMemory
     val memoryFraction = conf.getDouble("spark.memory.fraction", 0.75)
-    val sum = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
+    val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
     val yellowLine = conf.getDouble("spark.murs.yellow", 0.4)
-    val yellowMemoryUsage = (totalMemory * memoryFraction * yellowLine).toLong
+    val yellowMemoryUsage = (freeStorageMemory * memoryFraction * yellowLine).toLong
     //if(sum > yellowMemoryUsage && !hasStopTask()){
-    if(!hasStopTask()){
-      logInfo(s"Memory pressure must be optimized.($sum/$yellowMemoryUsage/$totalMemory)")
-//      var minMemoryUsageIndex = 0
-//      for (i <- 0 until tasks.length) {
-//        if (memoryUsage(i) < memoryUsage(minMemoryUsageIndex))
-//          minMemoryUsageIndex = i
-//      }
-//      val recommandStopTask = tasks(minMemoryUsageIndex)
-//      if(runningTasks.containsKey(recommandStopTask)){
-//        addStopTask(tasks(minMemoryUsageIndex))
-//      }
+    if(!hasStopTask() && usedMemory > 2 * freeStorageMemory){
+      logInfo(s"Memory pressure must be optimized.($usedMemory/$yellowMemoryUsage/$freeStorageMemory)")
+      val (tasks, totalRecords) = taskMURSample.getAllTotalRecordsRead()
+      val inputRecords = taskMURSample.getAllRecordsRead()
+      val inputBytes = taskMURSample.getAllBytesRead()
+      val memoryUsage = taskMURSample.getAllMemoryUsage()
+      var minMemoryUsageIndex = 0
+      for (i <- 0 until tasks.length) {
+        if (memoryUsage(i) < memoryUsage(minMemoryUsageIndex))
+          minMemoryUsageIndex = i
+      }
+      val recommandStopTask = tasks(minMemoryUsageIndex)
+      if(runningTasks.containsKey(recommandStopTask)){
+        addStopTask(tasks(minMemoryUsageIndex))
+      }
     }
   }
 
