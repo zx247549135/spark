@@ -526,7 +526,7 @@ private[spark] class Executor(
       }
     }
 
-    murScheduler.computeStopTask()
+    //murScheduler.computeStopTask()
   }
 
   /**
