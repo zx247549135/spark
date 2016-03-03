@@ -160,6 +160,7 @@ class MURScheduler(
     val yellowLine = conf.getDouble("spark.murs.yellow", 0.4)
     val yellowMemoryUsage = (freeStorageMemory * memoryFraction * yellowLine).toLong
     //if(sum > yellowMemoryUsage && !hasStopTask()){
+    /*
     if(!hasStopTask() && usedMemory > 2 * freeStorageMemory){
       logInfo(s"Memory pressure must be optimized.($usedMemory/$yellowMemoryUsage/$freeStorageMemory)")
       val (tasks, totalRecords) = taskMURSample.getAllTotalRecordsRead()
@@ -175,7 +176,32 @@ class MURScheduler(
       if(runningTasks.containsKey(recommandStopTask)){
         addStopTask(tasks(minMemoryUsageIndex))
       }
+    }*/
+    if(!hasStopTask() && usedMemory > yellowMemoryUsage){
+      logInfo(s"Memory pressure must be optimized.($usedMemory/$yellowMemoryUsage/$freeStorageMemory)")
+      val(tasks, totalRecords) = taskMURSample.getAllTotalRecordsRead()
+      val inputRecords = taskMURSample.getAllRecordsRead()
+      val inputBytes = taskMURSample.getAllBytesRead()
+      val memoryUsage = taskMURSample.getAllMemoryUsage()
+      var maxMemoryUsageRationIndex = 0
+      for(i <- 0 until tasks.length ){
+        if( memoryUseRatio(memoryUsage,inputBytes,inputRecords,totalRecords,i)> memoryUseRatio(memoryUsage,inputBytes,inputRecords,totalRecords,maxMemoryUsageRationIndex)){
+          maxMemoryUsageRationIndex=i
+        }
+        val recommandStopTask = tasks( maxMemoryUsageRationIndex)
+        if( runningTasks.containsKey( recommandStopTask)){
+          addStopTask(tasks(maxMemoryUsageRationIndex))
+        }
+
+      }
+
     }
+
+    def memoryUseRatio(memoryUsage: Array[Long], inputBytes: Array[Long], inputRecords: Array[Long], totalRecords: Array[Long], index: Int):Double={
+      val mur:Double =( memoryUsage(index): (Double) ) /( (inputBytes(index): (Double)) * ( inputRecords(index): (Double)) / (totalRecords(index): (Double)) )
+      mur
+    }
+
   }
 
 }
