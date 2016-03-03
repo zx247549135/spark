@@ -192,13 +192,13 @@ class MURScheduler(
         if( runningTasks.containsKey( recommandStopTask)){
           addStopTask(tasks(maxMemoryUsageRationIndex))
         }
-
       }
 
     }
 
     def memoryUseRatio(memoryUsage: Array[Long], inputBytes: Array[Long], inputRecords: Array[Long], totalRecords: Array[Long], index: Int):Double={
-      val mur:Double =( memoryUsage(index): (Double) ) /( (inputBytes(index): (Double)) * ( inputRecords(index): (Double)) / (totalRecords(index): (Double)) )
+      val mur:Double =( memoryUsage(index): (Double) ) / ( (inputBytes(index): (Double)) *
+        ( inputRecords(index): (Double)) / (totalRecords(index): (Double)) )
       mur
     }
 
