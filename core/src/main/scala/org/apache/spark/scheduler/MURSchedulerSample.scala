@@ -158,6 +158,17 @@ class MURSchedulerSample extends Serializable with Logging{
     else
       0L
   }
+  //return the delta value of an ArrayBuffer's last two value
+  def getDeltaValue(valueBuffer: ArrayBuffer[Long]): Long={
+    if(valueBuffer == null)
+      0L
+    else if(valueBuffer.length != 0)
+      valueBuffer.last-valueBuffer(valueBuffer.length-2)
+    else
+      0L
+
+
+  }
 
   def getBytesReadInput(taskId: Long) = getValue(taskBytesRead_input.get(taskId))
   def getBytesReadShuffle(taskId: Long) = getValue(taskBytesRead_shuffle.get(taskId))
@@ -188,17 +199,17 @@ class MURSchedulerSample extends Serializable with Logging{
     result
   }
 
-  def getAllRecordsRead(): Array[Long] = {
+  def getAllRecordsReadDeltaValue(): Array[Long] = {
     val result = new Array[Long](currentTasksRecordsInputType.size())
     var index = 0
     val keyIterator = currentTasksRecordsInputType.keySet().iterator()
     while(keyIterator.hasNext){
       val taskId = keyIterator.next()
       currentTasksRecordsInputType.get(taskId) match{
-        case 0 => result.update(index, getValue(taskRecordsRead_input.get(taskId)))
-        case 1 => result.update(index, getValue(taskRecordsRead_shuffle.get(taskId)))
-        case 2 => result.update(index, getValue(taskRecordsRead_cache.get(taskId)))
-        case 3 => result.update(index, getValue(taskRecordsRead_cogroup.get(taskId)))
+        case 0 => result.update(index, getDeltaValue(taskRecordsRead_input.get(taskId)))
+        case 1 => result.update(index, getDeltaValue(taskRecordsRead_shuffle.get(taskId)))
+        case 2 => result.update(index, getDeltaValue(taskRecordsRead_cache.get(taskId)))
+        case 3 => result.update(index, getDeltaValue(taskRecordsRead_cogroup.get(taskId)))
       }
       index += 1
     }
@@ -219,15 +230,15 @@ class MURSchedulerSample extends Serializable with Logging{
     (tasks,result)
   }
 
-  def getAllMemoryUsage(): Array[Long] = {
+  def getAllMemoryUsageDeltaValue(): Array[Long] = {
     val result = new Array[Long](currentTasksMemoryUseType.size())
     var index = 0
     val keyIterator = currentTasksMemoryUseType.keySet().iterator()
     while(keyIterator.hasNext){
       val taskId = keyIterator.next()
       currentTasksMemoryUseType.get(taskId) match{
-        case 0 => result.update(index, getValue(taskShuffleMemoryUsage.get(taskId)))
-        case 1 => result.update(index, getValue(taskCacheMemoryUsage.get(taskId)))
+        case 0 => result.update(index, getDeltaValue(taskShuffleMemoryUsage.get(taskId)))
+        case 1 => result.update(index, getDeltaValue(taskCacheMemoryUsage.get(taskId)))
       }
       index += 1
     }

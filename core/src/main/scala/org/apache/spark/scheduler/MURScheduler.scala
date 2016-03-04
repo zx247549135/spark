@@ -180,12 +180,12 @@ class MURScheduler(
     if(!hasStopTask() && usedMemory > yellowMemoryUsage){
       logInfo(s"Memory pressure must be optimized.($usedMemory/$yellowMemoryUsage/$freeStorageMemory)")
       val(tasks, totalRecords) = taskMURSample.getAllTotalRecordsRead()
-      val inputRecords = taskMURSample.getAllRecordsRead()
+      val deltaInputRecords = taskMURSample.getAllRecordsReadDeltaValue()
       val inputBytes = taskMURSample.getAllBytesRead()
-      val memoryUsage = taskMURSample.getAllMemoryUsage()
+      val deltaMemoryUsage = taskMURSample.getAllMemoryUsageDeltaValue()
       var maxMemoryUsageRationIndex = 0
       for(i <- 0 until tasks.length ){
-        if( memoryUseRatio(memoryUsage,inputBytes,inputRecords,totalRecords,i)> memoryUseRatio(memoryUsage,inputBytes,inputRecords,totalRecords,maxMemoryUsageRationIndex)){
+        if( memoryUseRatio(deltaMemoryUsage,inputBytes,deltaInputRecords,totalRecords,i)> memoryUseRatio(deltaMemoryUsage,inputBytes,deltaInputRecords,totalRecords,maxMemoryUsageRationIndex)){
           maxMemoryUsageRationIndex=i
         }
         val recommandStopTask = tasks( maxMemoryUsageRationIndex)
