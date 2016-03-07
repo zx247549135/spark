@@ -162,7 +162,7 @@ class MURScheduler(
     val yellowLine = conf.getDouble("spark.murs.yellow", 0.4)
     val yellowMemoryUsage = (freeStorageMemory * memoryFraction * yellowLine).toLong
 
-    val coreNum=conf.getInt("spark.cores.max",48)
+    val coreNum=conf.getInt("spark.cores.max",12)
     //if(sum > yellowMemoryUsage && !hasStopTask()){
     /*
     if(!hasStopTask() && usedMemory > 2 * freeStorageMemory){
