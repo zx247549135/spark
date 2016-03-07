@@ -1,6 +1,8 @@
 package org.apache.spark.scheduler
 
+import java.util
 import java.util.concurrent.ConcurrentHashMap
+import  java.util.TreeMap
 
 import org.apache.spark.{SparkEnv, SparkConf, Logging}
 import org.apache.spark.executor.TaskMetrics
@@ -159,6 +161,8 @@ class MURScheduler(
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
     val yellowLine = conf.getDouble("spark.murs.yellow", 0.4)
     val yellowMemoryUsage = (freeStorageMemory * memoryFraction * yellowLine).toLong
+
+    val coreNum=conf.getInt("spark.cores.max",48)
     //if(sum > yellowMemoryUsage && !hasStopTask()){
     /*
     if(!hasStopTask() && usedMemory > 2 * freeStorageMemory){
@@ -183,15 +187,19 @@ class MURScheduler(
       val deltaInputRecords = taskMURSample.getAllRecordsReadDeltaValue()
       val inputBytes = taskMURSample.getAllBytesRead()
       val deltaMemoryUsage = taskMURSample.getAllMemoryUsageDeltaValue()
-      var maxMemoryUsageRationIndex = 0
+      val MURTreeMap = new util.TreeMap[Double,Long]()
+      //var maxMemoryUsageRationIndex = 0
       for(i <- 0 until tasks.length ){
-        if( memoryUseRatio(deltaMemoryUsage,inputBytes,deltaInputRecords,totalRecords,i)> memoryUseRatio(deltaMemoryUsage,inputBytes,deltaInputRecords,totalRecords,maxMemoryUsageRationIndex)){
-          maxMemoryUsageRationIndex=i
+        MURTreeMap.put( memoryUseRatio(deltaMemoryUsage,inputBytes,deltaInputRecords,totalRecords,i),tasks(i))
         }
-        val recommandStopTask = tasks( maxMemoryUsageRationIndex)
+      while (MURTreeMap.size()> coreNum){
+
+        val highestMUR= MURTreeMap.lastKey()
+        val recommandStopTask = MURTreeMap.get(highestMUR)
         if( runningTasks.containsKey( recommandStopTask)){
-          addStopTask(tasks(maxMemoryUsageRationIndex))
+          addStopTask(recommandStopTask)
         }
+        MURTreeMap.remove(highestMUR)
       }
 
     }
