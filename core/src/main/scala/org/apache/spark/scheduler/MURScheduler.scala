@@ -157,36 +157,40 @@ class MURScheduler(
   def computeStopTask(): Unit ={
     val memoryManager = env.memoryManager
     val freeStorageMemory = memoryManager.maxStorageMemory
-   // val memoryFraction = conf.getDouble("spark.memory.fraction", 0.75)
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
     val yellowLine = conf.getDouble("spark.murs.yellow", 0.4)
     val yellowMemoryUsage = ((freeStorageMemory + memoryManager.executionMemoryUsed)*yellowLine).toLong
+    var freeMemory: Double = freeStorageMemory - memoryManager.storageMemoryUsed
 
-    val coreNum=conf.getInt("spark.executor.cores",12)
-    //if(sum > yellowMemoryUsage && !hasStopTask()){
-    /*
-    if(!hasStopTask() && usedMemory > 2 * freeStorageMemory){
-      logInfo(s"Memory pressure must be optimized.($usedMemory/$yellowMemoryUsage/$freeStorageMemory)")
-      val (tasks, totalRecords) = taskMURSample.getAllTotalRecordsRead()
-      val inputRecords = taskMURSample.getAllRecordsRead()
-      val inputBytes = taskMURSample.getAllBytesRead()
-      val memoryUsage = taskMURSample.getAllMemoryUsage()
-      var minMemoryUsageIndex = 0
-      for (i <- 0 until tasks.length) {
-        if (memoryUsage(i) < memoryUsage(minMemoryUsageIndex))
-          minMemoryUsageIndex = i
-      }
-      val recommandStopTask = tasks(minMemoryUsageIndex)
-      if(runningTasks.containsKey(recommandStopTask)){
-        addStopTask(tasks(minMemoryUsageIndex))
-      }
-    }*/
+    //val coreNum=conf.getInt("spark.executor.cores",12)
     if(!hasStopTask() && usedMemory > yellowMemoryUsage){
       logInfo(s"Memory pressure must be optimized.($usedMemory/$yellowMemoryUsage/$freeStorageMemory)")
       val(tasks, totalRecords) = taskMURSample.getAllTotalRecordsRead()
-      val deltaInputRecords = taskMURSample.getAllRecordsReadDeltaValue()
-      val inputBytes = taskMURSample.getAllBytesRead()
-      val deltaMemoryUsage = taskMURSample.getAllMemoryUsageDeltaValue()
+      //val deltaInputRecords = taskMURSample.getAllRecordsReadDeltaValue()
+      val inputRecords = taskMURSample.getAllRecordsRead()
+      //val inputBytes = taskMURSample.getAllBytesRead()
+     // val deltaMemoryUsage = taskMURSample.getAllMemoryUsageDeltaValue()
+      val memoryUsage = taskMURSample.getAllMemoryUsage()
+      var index = 0
+      while (freeMemory > 0){
+        val needMemory = ((memoryUsage(index)):(Double)) *(
+          ((totalRecords(index)):(Double)) - ((inputRecords(index)):(Double)) )/ ((inputRecords(index)):(Double))
+        if(freeMemory > needMemory){
+          index += 1
+        }
+        freeMemory -=  needMemory
+
+      }
+      logInfo(s"the number of the tasks we decide  to run is $index + 1")
+      for (i <- index until tasks.length){
+        val recommandStopTask = tasks(i)
+        if( runningTasks.containsKey( recommandStopTask)){
+          addStopTask(recommandStopTask)
+        }
+
+      }
+
+      /*
       val MURTreeMap = new util.TreeMap[Double,Long]()
       //var maxMemoryUsageRationIndex = 0
       for(i <- 0 until tasks.length ){
@@ -201,6 +205,7 @@ class MURScheduler(
         }
         MURTreeMap.remove(highestMUR)
       }
+      */
 
     }
 

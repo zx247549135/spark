@@ -216,6 +216,23 @@ class MURSchedulerSample extends Serializable with Logging{
     result
   }
 
+  def getAllRecordsRead(): Array[Long] = {
+    val result = new Array[Long](currentTasksRecordsInputType.size())
+    var index = 0
+    val keyIterator = currentTasksRecordsInputType.keySet().iterator()
+    while(keyIterator.hasNext){
+      val taskId = keyIterator.next()
+      currentTasksRecordsInputType.get(taskId) match{
+        case 0 => result.update(index, getValue(taskRecordsRead_input.get(taskId)))
+        case 1 => result.update(index, getValue(taskRecordsRead_shuffle.get(taskId)))
+        case 2 => result.update(index, getValue(taskRecordsRead_cache.get(taskId)))
+        case 3 => result.update(index, getValue(taskRecordsRead_cogroup.get(taskId)))
+      }
+      index += 1
+    }
+    result
+  }
+
   def getAllTotalRecordsRead(): (Array[Long], Array[Long]) = {
     val result = new Array[Long](taskTotalRecords.size())
     val tasks = new Array[Long](taskTotalRecords.size())
@@ -239,6 +256,20 @@ class MURSchedulerSample extends Serializable with Logging{
       currentTasksMemoryUseType.get(taskId) match{
         case 0 => result.update(index, getDeltaValue(taskShuffleMemoryUsage.get(taskId)))
         case 1 => result.update(index, getDeltaValue(taskCacheMemoryUsage.get(taskId)))
+      }
+      index += 1
+    }
+    result
+  }
+  def getAllMemoryUsage(): Array[Long] = {
+    val result = new Array[Long](currentTasksMemoryUseType.size())
+    var index = 0
+    val keyIterator = currentTasksMemoryUseType.keySet().iterator()
+    while(keyIterator.hasNext){
+      val taskId = keyIterator.next()
+      currentTasksMemoryUseType.get(taskId) match{
+        case 0 => result.update(index, getValue(taskShuffleMemoryUsage.get(taskId)))
+        case 1 => result.update(index, getValue(taskCacheMemoryUsage.get(taskId)))
       }
       index += 1
     }
