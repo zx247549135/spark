@@ -172,7 +172,8 @@ class MURScheduler(
      // val deltaMemoryUsage = taskMURSample.getAllMemoryUsageDeltaValue()
       val memoryUsage = taskMURSample.getAllMemoryUsage()
       var index = 0
-      while (freeMemory > 0){
+      val length = tasks.length
+      while (freeMemory > 0 && index < length ){
         val needMemory = ((memoryUsage(index)):(Double)) *(
           ((totalRecords(index)):(Double)) - ((inputRecords(index)):(Double)) )/ ((inputRecords(index)):(Double))
         if(freeMemory > needMemory){
