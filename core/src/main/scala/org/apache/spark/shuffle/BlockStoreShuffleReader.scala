@@ -57,17 +57,11 @@ private[spark] class BlockStoreShuffleReader[K, C](
     val serializerInstance = ser.newInstance()
 
     // Create a key/value iterator for each stream
-    val recordIter1 = wrappedStreams.flatMap { wrappedStream =>
+    val recordIter = wrappedStreams.flatMap { wrappedStream =>
       // Note: the asKeyValueIterator below wraps a key/value iterator inside of a
       // NextIterator. The NextIterator makes sure that close() is called on the
       // underlying InputStream when all records have been read.
       serializerInstance.deserializeStream(wrappedStream).asKeyValueIterator
-    }
-    val (recordIter, recordIter2) = recordIter1.duplicate
-    try {
-      context.taskMURS().updateTotalRecords(context.taskAttemptId(), recordIter2.size)
-    } catch {
-      case e: Exception => logInfo(s"MURS5: $e")
     }
 
     // Update the context task metrics for each record read.
