@@ -232,7 +232,17 @@ class MURSchedulerSample extends Serializable with Logging{
     }
     result
   }
-
+  def  getTasks(): Array[Long]= {
+    val tasks = new Array[Long](taskTotalRecords.size())
+    val keyIterator = taskTotalRecords.keySet().iterator()
+    var index = 0
+    while(keyIterator.hasNext){
+      val taskId = keyIterator.next()
+      tasks.update(index, taskId)
+      index += 1
+    }
+    tasks
+  }
   def getAllTotalRecordsRead(): (Array[Long], Array[Long]) = {
     val result = new Array[Long](taskTotalRecords.size())
     val tasks = new Array[Long](taskTotalRecords.size())

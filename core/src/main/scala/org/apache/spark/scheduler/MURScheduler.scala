@@ -165,12 +165,17 @@ class MURScheduler(
     //val coreNum=conf.getInt("spark.executor.cores",12)
     if(!hasStopTask() && usedMemory > yellowMemoryUsage){
       logInfo(s"Memory pressure must be optimized.($usedMemory/$yellowMemoryUsage/$freeStorageMemory)")
-      val(tasks, totalRecords) = taskMURSample.getAllTotalRecordsRead()
+      val tasks = taskMURSample.getTasks()
+      for(i <- 0 until tasks.length){
+        showMessage(tasks(i))
+      }
+     // val(tasks, totalRecords) = taskMURSample.getAllTotalRecordsRead()
       //val deltaInputRecords = taskMURSample.getAllRecordsReadDeltaValue()
-      val inputRecords = taskMURSample.getAllRecordsRead()
+     // val inputRecords = taskMURSample.getAllRecordsRead()
       //val inputBytes = taskMURSample.getAllBytesRead()
      // val deltaMemoryUsage = taskMURSample.getAllMemoryUsageDeltaValue()
-      val memoryUsage = taskMURSample.getAllMemoryUsage()
+      //val memoryUsage = taskMURSample.getAllMemoryUsage()
+      /*
       var index = 0
       val length = tasks.length
       while (freeMemory > 0 && index < length ){
@@ -180,7 +185,6 @@ class MURScheduler(
           index += 1
         }
         freeMemory -=  needMemory
-
       }
       logInfo(s"the number of the tasks we decide  to run is $index + 1")
       for (i <- index until tasks.length){
@@ -188,17 +192,13 @@ class MURScheduler(
         if( runningTasks.containsKey( recommandStopTask)){
           addStopTask(recommandStopTask)
         }
-
       }
-
-      /*
       val MURTreeMap = new util.TreeMap[Double,Long]()
       //var maxMemoryUsageRationIndex = 0
       for(i <- 0 until tasks.length ){
         MURTreeMap.put( memoryUseRatio(deltaMemoryUsage,inputBytes,deltaInputRecords,totalRecords,i),tasks(i))
         }
       while (MURTreeMap.size()> coreNum){
-
         val highestMUR= MURTreeMap.lastKey()
         val recommandStopTask = MURTreeMap.get(highestMUR)
         if( runningTasks.containsKey( recommandStopTask)){
@@ -207,7 +207,6 @@ class MURScheduler(
         MURTreeMap.remove(highestMUR)
       }
       */
-
     }
 
     def memoryUseRatio(memoryUsage: Array[Long], inputBytes: Array[Long], inputRecords: Array[Long], totalRecords: Array[Long], index: Int):Double={
