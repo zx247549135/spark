@@ -162,7 +162,7 @@ class MURSchedulerSample extends Serializable with Logging{
   def getDeltaValue(valueBuffer: ArrayBuffer[Long]): Long={
     if(valueBuffer == null)
       0L
-    else if(valueBuffer.length != 0)
+    else if(valueBuffer.length >1)
       valueBuffer.last-valueBuffer(valueBuffer.length-2)
     else
       0L
