@@ -198,7 +198,7 @@ private[spark] class Executor(
       startGCTime = computeTotalGcTime()
 
       // when the task is running we add it with it memory manager to the MURS
-      murScheduler.registerTask(taskId)
+      murScheduler.registerTask(taskId, taskMemoryManager)
 
       try {
         val (taskFiles, taskJars, taskBytes) = Task.deserializeWithDependencies(serializedTask)

@@ -20,6 +20,7 @@ class MURScheduler(
 
   // the second value of runningTasks save the taskType(shuffle, result) of this task
   private val runningTasks = new ConcurrentHashMap[Long, Int]
+  private val runningTasksMemoryManage = new ConcurrentHashMap[Long, TaskMemoryManager]
   private val finishedTasks = new ArrayBuffer[Long]()
 
   private val mursRecommendStopTasks = new ConcurrentHashMap[Int, Long]
@@ -60,8 +61,9 @@ class MURScheduler(
       s"memory usage $shuffleMemoryUsage/$cacheMemoryUsage.")
   }
 
-  def registerTask(taskId: Long): Unit = {
+  def registerTask(taskId: Long, taskMemoryManager: TaskMemoryManager): Unit = {
     runningTasks.put(taskId, 0)
+    runningTasksMemoryManage.put(taskId, taskMemoryManager)
     runningTasksSampleFlag.put(taskId, false)
     taskMURSample.registerTask(taskId)
   }
@@ -156,18 +158,22 @@ class MURScheduler(
 
   def computeStopTask(): Unit ={
     val memoryManager = env.memoryManager
-    val freeStorageMemory = memoryManager.maxStorageMemory
+    val maxStorageMemory = memoryManager.maxStorageMemory
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
     val yellowLine = conf.getDouble("spark.murs.yellow", 0.4)
-    val yellowMemoryUsage = ((freeStorageMemory + memoryManager.executionMemoryUsed)*yellowLine).toLong
-    var freeMemory: Double = freeStorageMemory - memoryManager.storageMemoryUsed
+    val yellowMemoryUsage = ((maxStorageMemory + memoryManager.executionMemoryUsed)*yellowLine).toLong
+    val freeMemory: Double = maxStorageMemory - memoryManager.storageMemoryUsed
 
     //val coreNum=conf.getInt("spark.executor.cores",12)
     if(!hasStopTask() && usedMemory > yellowMemoryUsage){
-      logInfo(s"Memory pressure must be optimized.($usedMemory/$yellowMemoryUsage/$freeStorageMemory)")
+      logInfo(s"Memory pressure must be optimized.($usedMemory/$yellowMemoryUsage/$freeMemory)")
       val tasks = taskMURSample.getTasks()
+      val memoryUsage = taskMURSample.getAllMemoryUsageDeltaValue()
       for(i <- 0 until tasks.length){
-        showMessage(tasks(i))
+        //showMessage(tasks(i))
+        val taskMemoryManager = runningTasksMemoryManage.get(tasks(i))
+        logInfo("memory usage : " + tasks(i) + "---" + taskMemoryManager.getMemoryConsumptionForThisTask
+          + "/" + memoryUsage(i))
       }
      // val(tasks, totalRecords) = taskMURSample.getAllTotalRecordsRead()
       //val deltaInputRecords = taskMURSample.getAllRecordsReadDeltaValue()
