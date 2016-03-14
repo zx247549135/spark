@@ -24,8 +24,8 @@ class MURScheduler(
   private val finishedTasks = new ArrayBuffer[Long]()
 
   private val mursRecommendStopTasks = new ConcurrentHashMap[Int, Long]
-  private val stopIndex = 1
-  private val mursStopTasks = new ConcurrentHashMap[Long, Int]
+  private var stopIndex = 0
+  private val mursStopTasks = new ArrayBuffer[Long]
 
   private val runningTasksSampleFlag = new ConcurrentHashMap[Long, Boolean]
 
@@ -135,11 +135,8 @@ class MURScheduler(
    */
 
   def addStopTask(taskId: Long): Unit ={
-    mursStopTasks.put(taskId, stopIndex)
-  }
-
-  def removeStopTask(taskId: Long): Unit ={
-    mursStopTasks.remove(taskId)
+    mursStopTasks.append(taskId)
+    stopIndex += 1
   }
 
   def removeStopTask(): Unit ={
@@ -147,7 +144,7 @@ class MURScheduler(
     mursStopTasks.clear()
   }
 
-  def shouldStop(taskId: Long): Boolean = mursStopTasks.containsKey(taskId)
+  def shouldStop(taskId: Long): Boolean = mursStopTasks.contains(taskId)
 
   def hasStopTask(): Boolean = !mursStopTasks.isEmpty
 
@@ -167,15 +164,28 @@ class MURScheduler(
     //val coreNum=conf.getInt("spark.executor.cores",12)
     if(!hasStopTask() && usedMemory > yellowMemoryUsage){
       logInfo(s"Memory pressure must be optimized.($usedMemory/$yellowMemoryUsage/$freeMemory)")
-      val tasks = taskMURSample.getTasks()
-      for(i <- 0 until tasks.length){
-        //showMessage(tasks(i))
-        if(tasks(i) % 12 == 0) {
-          val taskMemoryManager = runningTasksMemoryManage.get(tasks(i))
-          logInfo("memory usage : " + tasks(i) + "---" + taskMemoryManager.getMemoryConsumptionForThisTask)
-          showMessage(tasks(i))
+      val runningTasksArray = taskMURSample.getTasks()
+      val tasksMemoryConsumption = runningTasksArray.map(taskId => {
+        val taskMemoryManger = runningTasksMemoryManage.get(taskId)
+        taskMemoryManger.getMemoryConsumptionForThisTask
+      })
+      var testFreeMemory = freeMemory
+      for(i <- 0 until runningTasksArray.length){
+        if(testFreeMemory - tasksMemoryConsumption(i) < 0){
+          addRecommendStopTask(runningTasksArray(i), 0)
         }
+        testFreeMemory -= tasksMemoryConsumption(i)
       }
+
+//      val tasks = taskMURSample.getTasks()
+//      for(i <- 0 until tasks.length){
+//        //showMessage(tasks(i))
+//        if(tasks(i) % 12 == 0) {
+//          val taskMemoryManager = runningTasksMemoryManage.get(tasks(i))
+//          logInfo("memory usage : " + tasks(i) + "---" + taskMemoryManager.getMemoryConsumptionForThisTask)
+//          showMessage(tasks(i))
+//        }
+//      }
      // val(tasks, totalRecords) = taskMURSample.getAllTotalRecordsRead()
       //val deltaInputRecords = taskMURSample.getAllRecordsReadDeltaValue()
      // val inputRecords = taskMURSample.getAllRecordsRead()
