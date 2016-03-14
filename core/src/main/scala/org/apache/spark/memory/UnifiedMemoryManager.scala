@@ -123,7 +123,6 @@ private[spark] class UnifiedMemoryManager private[memory] (
           maxMemory - math.min(storageMemoryUsed, storageRegionSize)
         }
 
-        logInfo(s"Memory required: $taskAttemptId need $numBytes")
         onHeapExecutionMemoryPool.acquireMemory(
           numBytes, taskAttemptId, maybeGrowExecutionPool, computeMaxExecutionPoolSize)
 

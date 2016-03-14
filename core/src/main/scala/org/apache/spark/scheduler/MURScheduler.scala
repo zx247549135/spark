@@ -155,11 +155,11 @@ class MURScheduler(
 
   def computeStopTask(): Unit ={
     val memoryManager = env.memoryManager
-    val maxStorageMemory = memoryManager.maxStorageMemory
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
+    val totalOldMemory = (memoryManager.maxStorageMemory + memoryManager.executionMemoryUsed)* 0.6
     val yellowLine = conf.getDouble("spark.murs.yellow", 0.4)
-    val yellowMemoryUsage = ((maxStorageMemory + memoryManager.executionMemoryUsed)*yellowLine).toLong
-    val freeMemory: Double = maxStorageMemory - memoryManager.storageMemoryUsed
+    val yellowMemoryUsage = (totalOldMemory * yellowLine).toLong
+    val freeMemory: Double = totalOldMemory - memoryManager.executionMemoryUsed - memoryManager.storageMemoryUsed
 
     //val coreNum=conf.getInt("spark.executor.cores",12)
     if(!hasStopTask() && usedMemory > yellowMemoryUsage){
