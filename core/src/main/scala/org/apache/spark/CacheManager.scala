@@ -60,7 +60,7 @@ private[spark] class CacheManager(blockManager: BlockManager) extends Logging {
         // If another thread already holds the lock, wait for it to finish return its results
         val storedValues = acquireLockForPartition[T](key)
         if (storedValues.isDefined) {
-          return new InterruptibleIterator[T](context, storedValues)
+          return new InterruptibleIterator[T](context, storedValues.get)
         }
 
         // Otherwise, we have to load the partition ourselves
