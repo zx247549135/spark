@@ -241,6 +241,7 @@ public class TaskMemoryManager {
         "Cannot allocate a page with more than " + MAXIMUM_PAGE_SIZE_BYTES + " bytes");
     }
 
+    logger.info("Task " + taskAttemptId + " require size: " + size);
     long acquired = acquireExecutionMemory(size, tungstenMemoryMode, consumer);
     if (acquired <= 0) {
       return null;
