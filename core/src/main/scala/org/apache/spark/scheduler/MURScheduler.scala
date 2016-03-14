@@ -25,7 +25,7 @@ class MURScheduler(
 
   private val mursRecommendStopTasks = new ConcurrentHashMap[Int, Long]
   private var stopIndex = 0
-  private val mursStopTasks = new ArrayBuffer[Long]
+  private val mursStopTasks = new ConcurrentHashMap[Int, Long]()
 
   private val runningTasksSampleFlag = new ConcurrentHashMap[Long, Boolean]
 
@@ -135,7 +135,8 @@ class MURScheduler(
    */
 
   def addStopTask(taskId: Long): Unit ={
-    mursStopTasks.append(taskId)
+    logInfo(s"Add stop task: $taskId")
+    mursStopTasks.put(stopIndex, taskId)
     stopIndex += 1
   }
 
