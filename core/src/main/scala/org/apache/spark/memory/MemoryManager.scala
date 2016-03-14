@@ -48,9 +48,34 @@ private[spark] abstract class MemoryManager(
   @GuardedBy("this")
   protected val offHeapExecutionMemoryPool = new ExecutionMemoryPool(this, "off-heap execution")
 
+  protected var shouldStopTask = false
+  protected var ensureStop = false
+
   storageMemoryPool.incrementPoolSize(storageMemory)
   onHeapExecutionMemoryPool.incrementPoolSize(onHeapExecutionMemory)
   offHeapExecutionMemoryPool.incrementPoolSize(conf.getSizeAsBytes("spark.memory.offHeap.size", 0))
+
+  /**
+   * MURS
+   *  registerStop: MURS need stop task when allocating new memory
+   *  ensureStopTasks: Memory manger is allocating new memory, MURS can stop
+   *  shouldStopTasks: whether MURS can stop
+   *  registerHasStop: MURS has stop tasks
+   */
+  def registerStop(): Unit = {
+    shouldStopTask = true
+  }
+
+  def ensureStopTasks(): Unit = {
+    ensureStop = true
+  }
+
+  def shouldStopTasks(): Boolean = ensureStop
+
+  def registerHasStop(): Unit = {
+    ensureStop = false
+    shouldStopTask = false
+  }
 
   /**
    * Total available memory for storage, in bytes. This amount can vary over time, depending on

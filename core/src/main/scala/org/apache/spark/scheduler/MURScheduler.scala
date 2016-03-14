@@ -134,28 +134,33 @@ class MURScheduler(
    *
    */
 
-  def addStopTask(taskId: Long): Unit ={
-    logInfo(s"Add stop task: $taskId")
-    mursStopTasks.put(stopIndex, taskId)
-    stopIndex += 1
+  def addStopTasks(): Unit = {
+    for(i <- 0 until stopIndex){
+      logInfo("Add stop task: " + mursRecommendStopTasks.get(i))
+      mursStopTasks.put(i, mursRecommendStopTasks.get(i))
+    }
   }
 
   def removeStopTask(): Unit ={
     logInfo("Remove all stop tasks.")
     mursStopTasks.clear()
+    mursRecommendStopTasks.clear()
   }
 
   def shouldStop(taskId: Long): Boolean = mursStopTasks.contains(taskId)
 
   def hasStopTask(): Boolean = !mursStopTasks.isEmpty
 
-  def addRecommendStopTask(taskId: Long, stopLevel: Int): Unit = {
-    mursRecommendStopTasks.put(stopLevel, taskId)
-    addStopTask(taskId)
+  def addRecommendStopTask(taskId: Long, index: Int): Unit = {
+    mursRecommendStopTasks.put(index, taskId)
   }
 
   def computeStopTask(): Unit ={
     val memoryManager = env.memoryManager
+    if(memoryManager.shouldStopTasks() && !mursRecommendStopTasks.isEmpty){
+      addStopTasks()
+      memoryManager.registerHasStop()
+    }
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
     val totalOldMemory = (memoryManager.maxStorageMemory + memoryManager.executionMemoryUsed)* 0.6
     val yellowLine = conf.getDouble("spark.murs.yellow", 0.4)
@@ -165,6 +170,7 @@ class MURScheduler(
     //val coreNum=conf.getInt("spark.executor.cores",12)
     if(!hasStopTask() && usedMemory > yellowMemoryUsage){
       logInfo(s"Memory pressure must be optimized.($usedMemory/$yellowMemoryUsage/$freeMemory)")
+      memoryManager.registerStop()
       val runningTasksArray = taskMURSample.getTasks()
       val tasksMemoryConsumption = runningTasksArray.map(taskId => {
         val taskMemoryManger = runningTasksMemoryManage.get(taskId)
@@ -173,7 +179,8 @@ class MURScheduler(
       var testFreeMemory = freeMemory
       for(i <- 0 until runningTasksArray.length){
         if(testFreeMemory - tasksMemoryConsumption(i) < 0){
-          addRecommendStopTask(runningTasksArray(i), 0)
+          addRecommendStopTask(runningTasksArray(i), stopIndex)
+          stopIndex += 1
         }
         testFreeMemory -= tasksMemoryConsumption(i)
       }
