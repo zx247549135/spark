@@ -91,8 +91,9 @@ private[spark] class UnifiedMemoryManager private[memory] (
          */
         def maybeGrowExecutionPool(extraMemoryNeeded: Long): Unit = {
           if(shouldStopTask){
-            ensureStopTasks()
+            ensureStop = true
             logInfo("Ensure stop.")
+            shouldStopTask = false
           }
           if (extraMemoryNeeded > 0) {
             // There is not enough free memory in the execution pool, so try to reclaim memory from

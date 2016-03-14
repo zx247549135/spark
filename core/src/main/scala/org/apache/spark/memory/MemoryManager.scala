@@ -66,10 +66,6 @@ private[spark] abstract class MemoryManager(
     shouldStopTask = true
   }
 
-  def ensureStopTasks(): Unit = {
-    ensureStop = true
-  }
-
   def shouldStopTasks(): Boolean = ensureStop
 
   def registerHasStop(): Unit = {

@@ -136,8 +136,10 @@ class MURScheduler(
 
   def addStopTasks(): Unit = {
     for(i <- 0 until stopIndex){
-      logInfo("Add stop task: " + mursRecommendStopTasks.get(i))
-      mursStopTasks.put(i, mursRecommendStopTasks.get(i))
+      if(mursRecommendStopTasks.containsKey(i)) {
+        logInfo("Add stop task: " + mursRecommendStopTasks.get(i))
+        mursStopTasks.put(i, mursRecommendStopTasks.get(i))
+      }
     }
   }
 
