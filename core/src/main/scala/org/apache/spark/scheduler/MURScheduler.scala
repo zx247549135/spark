@@ -23,6 +23,7 @@ class MURScheduler(
   private val runningTasksMemoryManage = new ConcurrentHashMap[Long, TaskMemoryManager]
   private val finishedTasks = new ArrayBuffer[Long]()
 
+  private var reStartIndex = 0
   private val mursRecommendStopTasks = new ConcurrentHashMap[Int, Long]
   private var stopIndex = 0
   private val mursStopTasks = new ConcurrentHashMap[Int, Long]()
@@ -139,14 +140,17 @@ class MURScheduler(
       if(mursRecommendStopTasks.containsKey(i)) {
         logInfo("Add stop task: " + mursRecommendStopTasks.get(i))
         mursStopTasks.put(i, mursRecommendStopTasks.get(i))
+        mursRecommendStopTasks.remove(i)
       }
     }
   }
 
   def removeStopTask(): Unit ={
-    logInfo("Remove all stop tasks.")
-    mursStopTasks.clear()
-    mursRecommendStopTasks.clear()
+    if(mursStopTasks.containsKey(reStartIndex)) {
+      logInfo("Remove stop task: " + mursStopTasks.get(reStartIndex))
+      mursStopTasks.remove(reStartIndex)
+      reStartIndex += 1
+    }
   }
 
   def shouldStop(taskId: Long): Boolean = mursStopTasks.contains(taskId)
@@ -157,6 +161,14 @@ class MURScheduler(
     mursRecommendStopTasks.put(index, taskId)
   }
 
+  private var totalOldMemory: Long = 0
+  private var yellowMemoryUsage: Long = 0
+
+  def updateMemroyLine(totalOld: Long, yellowLine: Long): Unit = {
+    totalOldMemory = totalOld
+    yellowMemoryUsage = yellowLine
+  }
+
   def computeStopTask(): Unit ={
     val memoryManager = env.memoryManager
     if(memoryManager.shouldStopTasks() && !mursRecommendStopTasks.isEmpty){
@@ -164,10 +176,7 @@ class MURScheduler(
       memoryManager.registerHasStop()
     }
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
-    val totalOldMemory = (memoryManager.maxStorageMemory + memoryManager.executionMemoryUsed)* 0.6
-    val yellowLine = conf.getDouble("spark.murs.yellow", 0.4)
-    val yellowMemoryUsage = (totalOldMemory * yellowLine).toLong
-    val freeMemory: Double = totalOldMemory - memoryManager.executionMemoryUsed - memoryManager.storageMemoryUsed
+    val freeMemory = totalOldMemory - memoryManager.executionMemoryUsed - memoryManager.storageMemoryUsed
 
     //val coreNum=conf.getInt("spark.executor.cores",12)
     if(!hasStopTask() && usedMemory > yellowMemoryUsage){

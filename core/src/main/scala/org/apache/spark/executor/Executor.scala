@@ -533,6 +533,13 @@ private[spark] class Executor(
    * Schedules a thread to sampling for MURS
    */
   private def startExecutorMURSSampling(): Unit = {
+
+    val memoryManager = env.memoryManager
+    val totalOldMemory = (memoryManager.maxStorageMemory + memoryManager.executionMemoryUsed)* 0.6
+    val yellowLine = conf.getDouble("spark.murs.yellow", 0.4)
+    val yellowMemoryUsage = (totalOldMemory * yellowLine).toLong
+    murScheduler.updateMemroyLine(totalOldMemory.toLong, yellowMemoryUsage)
+
     val intervalMs = conf.getTimeAsMs("spark.murs.samplingInterval", "200ms")
 
     // Wait a random interval so the sampling don't end up in sync
