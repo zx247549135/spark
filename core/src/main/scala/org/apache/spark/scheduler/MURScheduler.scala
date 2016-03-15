@@ -171,6 +171,7 @@ class MURScheduler(
   }
 
   def computeStopTask(): Unit ={
+    logInfo(s"Now Task: $stopIndex, $reStartIndex and running " + runningTasks.size())
     val memoryManager = env.memoryManager
     if(memoryManager.shouldStopTasks() && !mursRecommendStopTasks.isEmpty){
       addStopTasks()
