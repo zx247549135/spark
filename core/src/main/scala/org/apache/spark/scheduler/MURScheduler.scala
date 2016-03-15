@@ -74,7 +74,8 @@ class MURScheduler(
     computeStopTask()
     if(!mursRecommendStopTasks.isEmpty)
       addStopTasks()
-    removeStopTask()
+    else
+      removeStopTask()
     runningTasks.remove(taskId)
     runningTasksSampleFlag.remove(taskId)
     taskMURSample.removeFinishedTask(taskId)
