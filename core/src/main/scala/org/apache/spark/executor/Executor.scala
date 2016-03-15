@@ -535,7 +535,7 @@ private[spark] class Executor(
   private def startExecutorMURSSampling(): Unit = {
 
     val memoryManager = env.memoryManager
-    val totalOldMemory = (memoryManager.maxStorageMemory + memoryManager.executionMemoryUsed)* 0.6
+    val totalOldMemory = (memoryManager.maxStorageMemory + memoryManager.executionMemoryUsed)
     val yellowLine = conf.getDouble("spark.murs.yellow", 0.4)
     val yellowMemoryUsage = (totalOldMemory * yellowLine).toLong
     murScheduler.updateMemroyLine(totalOldMemory.toLong, yellowMemoryUsage)
