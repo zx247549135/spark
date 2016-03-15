@@ -58,7 +58,7 @@ private[spark] abstract class MemoryManager(
   /**
    * MURS
    *  registerStop: MURS need stop task when allocating new memory
-   *  ensureStopTasks: Memory manger is allocating new memory, MURS can stop
+   *  ensureStop: Memory manger is allocating new memory, MURS can stop
    *  shouldStopTasks: whether MURS can stop
    *  registerHasStop: MURS has stop tasks
    */

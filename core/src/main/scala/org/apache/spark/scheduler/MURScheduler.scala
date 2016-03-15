@@ -70,6 +70,7 @@ class MURScheduler(
   }
 
   def removeFinishedTask(taskId: Long): Unit = {
+    finishedTasks.append(taskId)
     removeStopTask()
     runningTasks.remove(taskId)
     runningTasksSampleFlag.remove(taskId)
@@ -175,7 +176,8 @@ class MURScheduler(
       addStopTasks()
       memoryManager.registerHasStop()
     }
-    if(hasStopTask() && runningTasks.size() == 1){
+    // only have stop tasks
+    if(runningTasks.size() == (stopIndex - reStartIndex)){
       removeStopTask()
     }
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
