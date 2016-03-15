@@ -188,7 +188,7 @@ class MURScheduler(
     val freeMemory = totalOldMemory - memoryManager.executionMemoryUsed - memoryManager.storageMemoryUsed
 
     //val coreNum=conf.getInt("spark.executor.cores",12)
-    if(!hasStopTask() && usedMemory > yellowMemoryUsage){
+    if(!hasStopTask() && !mursRecommendStopTasks.isEmpty && usedMemory > yellowMemoryUsage){
       logInfo(s"Memory pressure must be optimized.($usedMemory/$yellowMemoryUsage/$freeMemory)")
       val runningTasksArray = taskMURSample.getTasks()
       val tasksMemoryConsumption = runningTasksArray.map(taskId => {
