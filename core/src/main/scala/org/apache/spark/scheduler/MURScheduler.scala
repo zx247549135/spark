@@ -71,6 +71,9 @@ class MURScheduler(
 
   def removeFinishedTask(taskId: Long): Unit = {
     finishedTasks.append(taskId)
+    computeStopTask()
+    if(!mursRecommendStopTasks.isEmpty)
+      addStopTasks()
     removeStopTask()
     runningTasks.remove(taskId)
     runningTasksSampleFlag.remove(taskId)
