@@ -150,6 +150,17 @@ class MURScheduler(
     }
   }
 
+  def removeAllStopTasks(): Unit = {
+    val title = reStartIndex
+    for(i <- title to stopIndex){
+      if(mursStopTasks.contains(i)){
+        logInfo("Remove stop task: " + mursStopTasks.get(i))
+        mursStopTasks.remove(i)
+        reStartIndex += 1
+      }
+    }
+  }
+
   def shouldStop(taskId: Long): Boolean = mursStopTasks.contains(taskId)
 
   def hasStopTask(): Boolean = !mursStopTasks.isEmpty
@@ -209,7 +220,7 @@ class MURScheduler(
       }
     }else if(hasStopTask() && perMemoryUsageJVM < yellowMemoryUsage){
       // full gc has worked but task still stop
-      removeStopTask()
+      removeAllStopTasks()
     }
     lastTotalMemoryUsage = usedMemory
   }
