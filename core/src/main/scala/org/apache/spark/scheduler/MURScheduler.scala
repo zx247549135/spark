@@ -198,13 +198,18 @@ class MURScheduler(
           taskMemoryManger.getMemoryConsumptionForThisTask
         })
         val avgTasksMemoryComsumption = tasksMemoryConsumption.sum / runningTasks.size()
+        var mostStopTasks = runningTasks.size() / 2
         for (i <- 0 until runningTasksArray.length) {
-          if (tasksMemoryConsumption(i) < avgTasksMemoryComsumption) {
+          if (tasksMemoryConsumption(i) < avgTasksMemoryComsumption && mostStopTasks > 0) {
             addStopTask(runningTasksArray(i))
+            mostStopTasks -= 1
           }
         }
         ensureStop = false
       }
+    }else if(hasStopTask() && perMemoryUsageJVM < yellowMemoryUsage){
+      // full gc has worked but task still stop
+      removeStopTask()
     }
     lastTotalMemoryUsage = usedMemory
   }
