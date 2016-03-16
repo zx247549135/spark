@@ -174,6 +174,13 @@ class MURScheduler(
     yellowMemoryUsage = yellowLine
   }
 
+  def showMemoryMessage(): Unit = {
+    val memoryManager = env.memoryManager
+    val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
+    val freeMemory = totalOldMemory - memoryManager.executionMemoryUsed - memoryManager.storageMemoryUsed
+    logInfo("Running tasks: " + runningTasks.size() + s"; Memory: $usedMemory/$freeMemory")
+  }
+
   def computeStopTask(): Unit ={
     logInfo(s"Now Task: $stopIndex, $reStartIndex and running " + runningTasks.size())
     val memoryManager = env.memoryManager
