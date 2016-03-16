@@ -154,7 +154,7 @@ class MURScheduler(
     val title = reStartIndex
     for(i <- title to stopIndex){
       if(mursStopTasks.containsKey(i)){
-        logInfo("Remove stop task: " + mursStopTasks.get(i))
+        logInfo("Remove stop task after full gc: " + mursStopTasks.get(i))
         mursStopTasks.remove(i)
         reStartIndex += 1
       }
