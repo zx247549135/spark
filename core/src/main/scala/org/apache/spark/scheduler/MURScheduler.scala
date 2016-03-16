@@ -1,5 +1,6 @@
 package org.apache.spark.scheduler
 
+import java.lang.management.ManagementFactory
 import java.util
 import java.util.concurrent.ConcurrentHashMap
 import  java.util.TreeMap
@@ -166,19 +167,12 @@ class MURScheduler(
     mursRecommendStopTasks.put(index, taskId)
   }
 
-  private var totalOldMemory: Long = 0
+  private var totalMemory: Long = 0
   private var yellowMemoryUsage: Long = 0
 
-  def updateMemroyLine(totalOld: Long, yellowLine: Long): Unit = {
-    totalOldMemory = totalOld
+  def updateMemroyLine(total: Long, yellowLine: Long): Unit = {
+    totalMemory = total
     yellowMemoryUsage = yellowLine
-  }
-
-  def showMemoryMessage(): Unit = {
-    val memoryManager = env.memoryManager
-    val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
-    val freeMemory = totalOldMemory - memoryManager.executionMemoryUsed - memoryManager.storageMemoryUsed
-    logInfo("Running tasks: " + runningTasks.size() + s"; Memory: $usedMemory/$freeMemory")
   }
 
   def computeStopTask(): Unit ={
@@ -192,24 +186,31 @@ class MURScheduler(
     if(runningTasks.size() == (stopIndex - reStartIndex)){
       removeStopTask()
     }
+
+    val usedMemoryJVM = ManagementFactory.getMemoryMXBean.getHeapMemoryUsage.getUsed
+    val freeMemoryJVM = totalMemory - usedMemoryJVM
+
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
-    val freeMemory = totalOldMemory - memoryManager.executionMemoryUsed - memoryManager.storageMemoryUsed
+    val freeMemory = totalMemory - memoryManager.executionMemoryUsed - memoryManager.storageMemoryUsed
 
     //val coreNum=conf.getInt("spark.executor.cores",12)
-    if(!hasStopTask() && mursRecommendStopTasks.isEmpty && usedMemory > yellowMemoryUsage){
-      logInfo(s"Memory pressure must be optimized.($usedMemory/$yellowMemoryUsage/$freeMemory)")
+    if(!hasStopTask() && mursRecommendStopTasks.isEmpty && usedMemoryJVM > yellowMemoryUsage){
+      logInfo(s"Memory pressure must be optimized.($usedMemoryJVM/$usedMemory/$yellowMemoryUsage/$freeMemoryJVM)")
       val runningTasksArray = taskMURSample.getTasks()
       val tasksMemoryConsumption = runningTasksArray.map(taskId => {
         val taskMemoryManger = runningTasksMemoryManage.get(taskId)
         taskMemoryManger.getMemoryConsumptionForThisTask
       })
-      var testFreeMemory = freeMemory
+      val avgUsedMemoryEachTask = usedMemory / runningTasksArray.length
+      var testFreeMemory = freeMemoryJVM
       for(i <- 0 until runningTasksArray.length){
-        if(testFreeMemory - tasksMemoryConsumption(i) < 0){
-          addRecommendStopTask(runningTasksArray(i), stopIndex)
-          stopIndex += 1
+        if( tasksMemoryConsumption(i) < avgUsedMemoryEachTask) {
+          if (testFreeMemory - tasksMemoryConsumption(i) < 0) {
+            addRecommendStopTask(runningTasksArray(i), stopIndex)
+            stopIndex += 1
+          }
+          testFreeMemory -= tasksMemoryConsumption(i)
         }
-        testFreeMemory -= tasksMemoryConsumption(i)
       }
       if(!mursRecommendStopTasks.isEmpty)
         memoryManager.registerStop()
