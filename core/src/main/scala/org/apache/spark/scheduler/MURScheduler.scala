@@ -197,14 +197,10 @@ class MURScheduler(
           val taskMemoryManger = runningTasksMemoryManage.get(taskId)
           taskMemoryManger.getMemoryConsumptionForThisTask
         })
-        val avgUsedMemoryEachTask = usedMemory / runningTasksArray.length
-        var testFreeMemory = freeMemoryJVM
+        val avgTasksMemoryComsumption = tasksMemoryConsumption.sum / runningTasks.size()
         for (i <- 0 until runningTasksArray.length) {
-          if (tasksMemoryConsumption(i) < avgUsedMemoryEachTask) {
-            if (testFreeMemory - tasksMemoryConsumption(i) < 0) {
-              addStopTask(runningTasksArray(i))
-            }
-            testFreeMemory -= tasksMemoryConsumption(i)
+          if (tasksMemoryConsumption(i) < avgTasksMemoryComsumption) {
+            addStopTask(runningTasksArray(i))
           }
         }
         ensureStop = false
