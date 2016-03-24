@@ -143,20 +143,24 @@ class MURScheduler(
   }
 
   def removeStopTask(): Unit ={
-    if(mursStopTasks.containsKey(reStartIndex)) {
-      logInfo("Remove stop task: " + mursStopTasks.get(reStartIndex))
-      mursStopTasks.remove(reStartIndex)
-      reStartIndex += 1
+    synchronized {
+      if (mursStopTasks.containsKey(reStartIndex)) {
+        logInfo("Remove stop task: " + mursStopTasks.get(reStartIndex))
+        mursStopTasks.remove(reStartIndex)
+        reStartIndex += 1
+      }
     }
   }
 
   def removeAllStopTasks(): Unit = {
-    val title = reStartIndex
-    for(i <- title to stopIndex){
-      if(mursStopTasks.containsKey(i)){
-        logInfo("Remove stop task after full gc: " + mursStopTasks.get(i))
-        mursStopTasks.remove(i)
-        reStartIndex += 1
+    synchronized {
+      val title = reStartIndex
+      for (i <- title to stopIndex) {
+        if (mursStopTasks.containsKey(i)) {
+          logInfo("Remove stop task: " + mursStopTasks.get(i))
+          mursStopTasks.remove(i)
+          reStartIndex += 1
+        }
       }
     }
   }
