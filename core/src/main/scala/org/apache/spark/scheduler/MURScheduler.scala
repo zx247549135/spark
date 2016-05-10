@@ -223,7 +223,7 @@ class MURScheduler(
 //            mostStopTasks -= 1
 //          }
 //        }
-        var flagMemoryUsageRate = 0.0
+        var flagMemoryUsageRate = Double.MinValue
         var minMemoryUsageRateIndex = 0
         var statisfiyTasks = (freeMemoryJVM / (usedMemoryJVM / runningTasks.size())).toInt
         while(statisfiyTasks > 0){
