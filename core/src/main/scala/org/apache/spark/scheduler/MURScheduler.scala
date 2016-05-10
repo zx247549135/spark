@@ -202,7 +202,7 @@ class MURScheduler(
     logInfo(s"Memory usage.($usedMemoryJVM/$perMemoryUsageJVM/$usedMemory/$yellowMemoryUsage/$freeMemoryJVM/$freeMemory)")
 
     if(!hasStopTask() && perMemoryUsageJVM > yellowMemoryUsage){
-      if(usedMemory > lastTotalMemoryUsage)
+      //if(usedMemory > lastTotalMemoryUsage)
         ensureStop = true
 
       logInfo(s"Memory pressure must be optimized.")
@@ -225,15 +225,15 @@ class MURScheduler(
 //        }
         var flagMemoryUsageRate = 0.0
         var minMemoryUsageRateIndex = 0
-        var useFreeMemory = freeMemory
-        while(useFreeMemory > 0){
+        var statisfiyTasks = (freeMemoryJVM / (usedMemoryJVM / runningTasks.size())).toInt
+        while(statisfiyTasks > 0){
           for(i <- 0 until runningTasksArray.length){
             if(tasksMemoryUsageRate(i) < tasksMemoryUsageRate(minMemoryUsageRateIndex)
               && tasksMemoryUsageRate(i) > flagMemoryUsageRate){
               minMemoryUsageRateIndex = i
             }
           }
-          useFreeMemory -= tasksMemoryUsage(minMemoryUsageRateIndex)
+          statisfiyTasks -= 1
           flagMemoryUsageRate = tasksMemoryUsageRate(minMemoryUsageRateIndex)
         }
         for(i <- 0 until runningTasksArray.length){
