@@ -159,15 +159,13 @@ class MURSchedulerSample extends Serializable with Logging{
       0L
   }
   //return the delta value of an ArrayBuffer's last two value
-  def getDeltaValue(valueBuffer: ArrayBuffer[Long]): Long={
+  def getDeltaValue(valueBuffer: ArrayBuffer[Long]): Double = {
     if(valueBuffer == null)
-      0L
+      0.0
     else if(valueBuffer.length >1)
       valueBuffer.last-valueBuffer(valueBuffer.length-2)
     else
-      0L
-
-
+      0.0
   }
 
   def getBytesReadInput(taskId: Long) = getValue(taskBytesRead_input.get(taskId))
@@ -184,55 +182,7 @@ class MURSchedulerSample extends Serializable with Logging{
   def getShuffleMemoryUsage(taskId: Long) = getValue(taskShuffleMemoryUsage.get(taskId))
   def getCacheMemoryUsage(taskId: Long) = getValue(taskCacheMemoryUsage.get(taskId))
 
-  def getAllBytesRead(): Array[Long] = {
-    val result = new Array[Long](currentTasksBytesInputType.size())
-    var index = 0
-    val keyIterator = currentTasksBytesInputType.keySet().iterator()
-    while(keyIterator.hasNext){
-      val taskId = keyIterator.next()
-      currentTasksBytesInputType.get(taskId) match{
-        case 0 => result.update(index, getValue(taskBytesRead_input.get(taskId)))
-        case 1 => result.update(index, getValue(taskBytesRead_shuffle.get(taskId)))
-      }
-      index += 1
-    }
-    result
-  }
-
-  def getAllRecordsReadDeltaValue(): Array[Long] = {
-    val result = new Array[Long](currentTasksRecordsInputType.size())
-    var index = 0
-    val keyIterator = currentTasksRecordsInputType.keySet().iterator()
-    while(keyIterator.hasNext){
-      val taskId = keyIterator.next()
-      currentTasksRecordsInputType.get(taskId) match{
-        case 0 => result.update(index, getDeltaValue(taskRecordsRead_input.get(taskId)))
-        case 1 => result.update(index, getDeltaValue(taskRecordsRead_shuffle.get(taskId)))
-        case 2 => result.update(index, getDeltaValue(taskRecordsRead_cache.get(taskId)))
-        case 3 => result.update(index, getDeltaValue(taskRecordsRead_cogroup.get(taskId)))
-      }
-      index += 1
-    }
-    result
-  }
-
-  def getAllRecordsRead(): Array[Long] = {
-    val result = new Array[Long](currentTasksRecordsInputType.size())
-    var index = 0
-    val keyIterator = currentTasksRecordsInputType.keySet().iterator()
-    while(keyIterator.hasNext){
-      val taskId = keyIterator.next()
-      currentTasksRecordsInputType.get(taskId) match{
-        case 0 => result.update(index, getValue(taskRecordsRead_input.get(taskId)))
-        case 1 => result.update(index, getValue(taskRecordsRead_shuffle.get(taskId)))
-        case 2 => result.update(index, getValue(taskRecordsRead_cache.get(taskId)))
-        case 3 => result.update(index, getValue(taskRecordsRead_cogroup.get(taskId)))
-      }
-      index += 1
-    }
-    result
-  }
-  def  getTasks(): Array[Long]= {
+  def getTasks(): Array[Long]= {
     val tasks = new Array[Long](taskTotalRecords.size())
     val keyIterator = taskTotalRecords.keySet().iterator()
     var index = 0
@@ -243,34 +193,7 @@ class MURSchedulerSample extends Serializable with Logging{
     }
     tasks
   }
-  def getAllTotalRecordsRead(): (Array[Long], Array[Long]) = {
-    val result = new Array[Long](taskTotalRecords.size())
-    val tasks = new Array[Long](taskTotalRecords.size())
-    var index = 0
-    val keyIterator = taskTotalRecords.keySet().iterator()
-    while(keyIterator.hasNext){
-      val taskId = keyIterator.next()
-      result.update(index, taskTotalRecords.get(taskId))
-      tasks.update(index, taskId)
-      index += 1
-    }
-    (tasks,result)
-  }
 
-  def getAllMemoryUsageDeltaValue(): Array[Long] = {
-    val result = new Array[Long](currentTasksMemoryUseType.size())
-    var index = 0
-    val keyIterator = currentTasksMemoryUseType.keySet().iterator()
-    while(keyIterator.hasNext){
-      val taskId = keyIterator.next()
-      currentTasksMemoryUseType.get(taskId) match{
-        case 0 => result.update(index, getDeltaValue(taskShuffleMemoryUsage.get(taskId)))
-        case 1 => result.update(index, getDeltaValue(taskCacheMemoryUsage.get(taskId)))
-      }
-      index += 1
-    }
-    result
-  }
   def getAllMemoryUsage(): Array[Long] = {
     val result = new Array[Long](currentTasksMemoryUseType.size())
     var index = 0
@@ -284,6 +207,49 @@ class MURSchedulerSample extends Serializable with Logging{
       index += 1
     }
     result
+  }
+
+  def getMemoryUsage(taskId: Long): Long = {
+    currentTasksMemoryUseType.get(taskId) match{
+      case 0 => getValue(taskShuffleMemoryUsage.get(taskId))
+      case 1 => getValue(taskCacheMemoryUsage.get(taskId))
+      case _ => 0L
+    }
+  }
+
+  def getBytesRead(taskId: Long): Long = {
+    currentTasksBytesInputType.get(taskId) match{
+      case 0 => getValue(taskBytesRead_input.get(taskId))
+      case 1 => getValue(taskBytesRead_shuffle.get(taskId))
+      case _ => 0
+    }
+  }
+
+  def getMemoryUsageRate(taskId: Long): Double = {
+    val deltaMemoryUsage = currentTasksMemoryUseType.get(taskId) match{
+      case 0 => getDeltaValue(taskShuffleMemoryUsage.get(taskId))
+      case 1 => getDeltaValue(taskCacheMemoryUsage.get(taskId))
+      case _ => 0.0
+    }
+    val deltaInputRecords = currentTasksRecordsInputType.get(taskId) match{
+      case 0 => getDeltaValue(taskRecordsRead_input.get(taskId))
+      case 1 => getDeltaValue(taskRecordsRead_shuffle.get(taskId))
+      case 2 => getDeltaValue(taskRecordsRead_cache.get(taskId))
+      case 3 => getDeltaValue(taskRecordsRead_cogroup.get(taskId))
+      case _ => 0.0
+    }
+    val totalInputRecords = taskTotalRecords.get(taskId)
+    val deltaInputBytes = currentTasksBytesInputType.get(taskId) match{
+      case 0 => getDeltaValue(taskBytesRead_input.get(taskId))
+      case 1 => getDeltaValue(taskBytesRead_shuffle.get(taskId))
+      case _ => 0.0
+    }
+    if(deltaInputRecords != 0 && deltaInputBytes != 0)
+      deltaMemoryUsage / deltaInputBytes
+    else if(deltaInputBytes != 0 && deltaInputBytes == 0 && totalInputRecords != 0)
+      deltaMemoryUsage / (deltaInputRecords / totalInputRecords * getBytesRead(taskId))
+    else
+      0.0
   }
 
 }

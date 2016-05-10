@@ -196,15 +196,15 @@ class MURScheduler(
     }
     lastTotalMemoryUsageJVM = usedMemoryJVM
 
-    val freeMemoryJVM = totalMemory - usedMemoryJVM
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
-    logInfo(s"Memory usage.($usedMemoryJVM/$perMemoryUsageJVM/$usedMemory/$yellowMemoryUsage/$freeMemoryJVM)")
+    val freeMemory = memoryManager.maxStorageMemory - memoryManager.storageMemoryUsed
+    // logInfo(s"Memory usage.($usedMemoryJVM/$perMemoryUsageJVM/$usedMemory/$yellowMemoryUsage/$freeMemoryJVM)")
 
     if(!hasStopTask() && perMemoryUsageJVM > yellowMemoryUsage){
       if(usedMemory > lastTotalMemoryUsage)
         ensureStop = true
 
-      logInfo(s"Memory pressure must be optimized.")
+      // logInfo(s"Memory pressure must be optimized.")
       if(ensureStop) {
         logInfo("Ensure stop")
         val runningTasksArray = taskMURSample.getTasks()
@@ -212,13 +212,32 @@ class MURScheduler(
           val taskMemoryManger = runningTasksMemoryManage.get(taskId)
           taskMemoryManger.getMemoryConsumptionForThisTask
         })
-        val avgTasksMemoryComsumption = tasksMemoryConsumption.sum / runningTasks.size()
-        var mostStopTasks = runningTasks.size() / 2
-        for (i <- 0 until runningTasksArray.length) {
-          if (tasksMemoryConsumption(i) < avgTasksMemoryComsumption && mostStopTasks > 0) {
-            addStopTask(runningTasksArray(i))
-            mostStopTasks -= 1
+        val tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
+        val tasksMemoryUsageRate = runningTasksArray.map(taskMURSample.getMemoryUsageRate(_))
+//        val avgTasksMemoryComsumption = tasksMemoryConsumption.sum / runningTasks.size()
+//        var mostStopTasks = runningTasks.size() / 2
+//        for (i <- 0 until runningTasksArray.length) {
+//          if (tasksMemoryConsumption(i) < avgTasksMemoryComsumption && mostStopTasks > 0) {
+//            addStopTask(runningTasksArray(i))
+//            mostStopTasks -= 1
+//          }
+//        }
+        var flagMemoryUsageRate = 0.0
+        var minMemoryUsageRateIndex = 0
+        var useFreeMemory = freeMemory * 2
+        while(useFreeMemory > 0){
+          for(i <- 0 until runningTasksArray.length){
+            if(tasksMemoryUsageRate(i) < tasksMemoryUsageRate(minMemoryUsageRateIndex)
+              && tasksMemoryUsageRate(i) > flagMemoryUsageRate){
+              minMemoryUsageRateIndex = i
+            }
           }
+          useFreeMemory -= tasksMemoryUsage(minMemoryUsageRateIndex)
+          flagMemoryUsageRate = tasksMemoryUsageRate(minMemoryUsageRateIndex)
+        }
+        for(i <- 0 until runningTasksArray.length){
+          if(tasksMemoryUsageRate(i) > flagMemoryUsageRate)
+            addStopTask(runningTasksArray(i))
         }
         ensureStop = false
       }
