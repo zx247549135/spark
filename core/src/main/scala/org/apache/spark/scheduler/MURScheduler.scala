@@ -215,7 +215,7 @@ class MURScheduler(
           val taskMemoryManger = runningTasksMemoryManage.get(taskId)
           taskMemoryManger.getMemoryConsumptionForThisTask
         })
-        val tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
+
         val tasksMemoryUsageRate = runningTasksArray.map(taskMURSample.getMemoryUsageRate(_))
         val tasksCompletePercent = runningTasksArray.map(taskMURSample.getCompletePercent(_))
         logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
@@ -239,7 +239,8 @@ class MURScheduler(
               minMemoryUsageRateIndex = i
             }
           }
-          satisfyTasks -= tasksMemoryConsumption(minMemoryUsageRateIndex) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
+          // satisfyTasks -= tasksMemoryConsumption(minMemoryUsageRateIndex) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
+          satisfyTasks -= (usedMemory / runningTasks.size()) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
           flagMemoryUsageRate = tasksMemoryUsageRate(minMemoryUsageRateIndex)
         }
         for(i <- 0 until runningTasksArray.length){
