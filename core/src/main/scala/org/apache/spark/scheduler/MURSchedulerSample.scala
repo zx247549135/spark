@@ -252,4 +252,19 @@ class MURSchedulerSample extends Serializable with Logging{
       0.0
   }
 
+  def getCompletePercent(taskId: Long): Double = {
+    val inputRecords = currentTasksRecordsInputType.get(taskId) match{
+      case 0 => getValue(taskRecordsRead_input.get(taskId))
+      case 1 => getValue(taskRecordsRead_shuffle.get(taskId))
+      case 2 => getValue(taskRecordsRead_cache.get(taskId))
+      case 3 => getValue(taskRecordsRead_cogroup.get(taskId))
+      case _ => 0
+    }
+    val totalInputRecords = taskTotalRecords.get(taskId)
+    if(totalInputRecords != 0)
+      inputRecords.toDouble / totalInputRecords.toDouble
+    else
+      0.0
+  }
+
 }
