@@ -174,7 +174,7 @@ class MURScheduler(
   private var perMemoryUsageJVM: Long = 0
   private var lastTotalMemoryUsageJVM: Long = 0
   private var lastTotalMemoryUsage: Long = 0
-  private var ensureStop = true
+  private var ensureStop = false
 
   def updateMemroyLine(total: Long, yellowLine: Long): Unit = {
     totalMemory = total
@@ -185,6 +185,7 @@ class MURScheduler(
   def computeStopTask(): Unit ={
     logInfo(s"Now Task: $stopIndex, $reStartIndex and running " + runningTasks.size())
     val memoryManager = env.memoryManager
+
     // only have stop tasks
     if(runningTasks.size() == (stopIndex - reStartIndex)){
       removeStopTask()
@@ -203,8 +204,8 @@ class MURScheduler(
     logInfo(s"Memory usage.($usedMemoryJVM/$perMemoryUsageJVM/$usedMemory/$yellowMemoryUsage/$freeMemoryJVM/$freeMemory)")
 
     if(!hasStopTask() && perMemoryUsageJVM > yellowMemoryUsage){
-      //if(usedMemory > lastTotalMemoryUsage)
-      // ensureStop = true
+      if(usedMemory > lastTotalMemoryUsage)
+        ensureStop = true
 
       logInfo(s"Memory pressure must be optimized.")
       if(ensureStop) {
@@ -229,23 +230,23 @@ class MURScheduler(
 //        }
         var flagMemoryUsageRate = Double.MinValue
         var minMemoryUsageRateIndex = 0
-        // var statisfiyTasks = (freeMemoryJVM / (usedMemoryJVM / runningTasks.size())).toInt
-        var statisfiyTasks = freeMemory * 0.85
-        while(statisfiyTasks > 0){
+        // var satisfyTasks = (freeMemoryJVM / (usedMemoryJVM / runningTasks.size())).toInt
+        var satisfyTasks = freeMemoryJVM * 0.85
+        while(satisfyTasks > 0){
           for(i <- 0 until runningTasksArray.length){
             if(tasksMemoryUsageRate(i) < tasksMemoryUsageRate(minMemoryUsageRateIndex)
               && tasksMemoryUsageRate(i) > flagMemoryUsageRate){
               minMemoryUsageRateIndex = i
             }
           }
-          statisfiyTasks -= tasksMemoryConsumption(minMemoryUsageRateIndex) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
+          satisfyTasks -= tasksMemoryConsumption(minMemoryUsageRateIndex) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
           flagMemoryUsageRate = tasksMemoryUsageRate(minMemoryUsageRateIndex)
         }
         for(i <- 0 until runningTasksArray.length){
           if(tasksMemoryUsageRate(i) > flagMemoryUsageRate)
             addStopTask(runningTasksArray(i))
         }
-        // ensureStop = false
+        ensureStop = false
       }
     }else if(hasStopTask() && perMemoryUsageJVM < yellowMemoryUsage){
       // full gc has worked but task still stop

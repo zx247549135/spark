@@ -264,7 +264,7 @@ class MURSchedulerSample extends Serializable with Logging{
     if(totalInputRecords != 0)
       inputRecords.toDouble / totalInputRecords.toDouble
     else
-      0.0
+      0.5
   }
 
 }
