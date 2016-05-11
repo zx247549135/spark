@@ -198,7 +198,7 @@ class MURScheduler(
     }
     lastTotalMemoryUsageJVM = usedMemoryJVM
 
-    val freeMemoryJVM = totalMemory - usedMemoryJVM
+    val freeMemoryJVM = (totalMemory * 0.66 - usedMemoryJVM).toLong
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
     val freeMemory = memoryManager.maxStorageMemory - memoryManager.storageMemoryUsed
     logInfo(s"Memory usage.($usedMemoryJVM/$perMemoryUsageJVM/$usedMemory/$yellowMemoryUsage/$freeMemoryJVM/$freeMemory)")
@@ -231,7 +231,7 @@ class MURScheduler(
         var flagMemoryUsageRate = Double.MinValue
         var minMemoryUsageRateIndex = 0
         // var satisfyTasks = (freeMemoryJVM / (usedMemoryJVM / runningTasks.size())).toInt
-        var satisfyTasks = freeMemoryJVM * 0.85
+        var satisfyTasks = freeMemoryJVM * 0.8
         while(satisfyTasks > 0){
           for(i <- 0 until runningTasksArray.length){
             if(tasksMemoryUsageRate(i) < tasksMemoryUsageRate(minMemoryUsageRateIndex)
