@@ -174,7 +174,7 @@ class MURScheduler(
   private var perMemoryUsageJVM: Long = 0
   private var lastTotalMemoryUsageJVM: Long = 0
   private var lastTotalMemoryUsage: Long = 0
-  private var ensureStop = false
+  private var ensureStop = true
 
   def updateMemroyLine(total: Long, yellowLine: Long): Unit = {
     totalMemory = total
