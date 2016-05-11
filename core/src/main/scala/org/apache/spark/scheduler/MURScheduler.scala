@@ -198,7 +198,7 @@ class MURScheduler(
     }
     lastTotalMemoryUsageJVM = usedMemoryJVM
 
-    val freeMemoryJVM = (totalMemory * 0.66 - usedMemoryJVM).toLong
+    val freeMemoryJVM = (totalMemory * 0.66 - perMemoryUsageJVM).toLong
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
     val freeMemory = memoryManager.maxStorageMemory - memoryManager.storageMemoryUsed
     logInfo(s"Memory usage.($usedMemoryJVM/$perMemoryUsageJVM/$usedMemory/$yellowMemoryUsage/$freeMemoryJVM/$freeMemory)")
