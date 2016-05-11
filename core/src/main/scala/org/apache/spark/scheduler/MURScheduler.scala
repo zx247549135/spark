@@ -188,6 +188,7 @@ class MURScheduler(
     // only have stop tasks
     if(runningTasks.size() == (stopIndex - reStartIndex)){
       removeStopTask()
+      ensureStop = false
     }
 
     val usedMemoryJVM = ManagementFactory.getMemoryMXBean.getHeapMemoryUsage.getUsed
@@ -203,7 +204,7 @@ class MURScheduler(
 
     if(!hasStopTask() && perMemoryUsageJVM > yellowMemoryUsage){
       //if(usedMemory > lastTotalMemoryUsage)
-        ensureStop = true
+      // ensureStop = true
 
       logInfo(s"Memory pressure must be optimized.")
       if(ensureStop) {
@@ -244,7 +245,7 @@ class MURScheduler(
           if(tasksMemoryUsageRate(i) > flagMemoryUsageRate)
             addStopTask(runningTasksArray(i))
         }
-        ensureStop = false
+        // ensureStop = false
       }
     }else if(hasStopTask() && perMemoryUsageJVM < yellowMemoryUsage){
       // full gc has worked but task still stop
