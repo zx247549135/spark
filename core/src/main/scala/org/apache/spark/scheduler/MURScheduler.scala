@@ -288,7 +288,7 @@ class MURScheduler(
         while (satisfyTasks > 0) {
           for (i <- 0 until runningTasksArray.length) {
             if (tasksCompletePercent(i) >= tasksCompletePercent(maxTaskComletePercentIndex)
-              && tasksCompletePercent(i) < flagTaskCompletePercent) {
+              && tasksCompletePercent(i) <= flagTaskCompletePercent) {
               maxTaskComletePercentIndex = i
             }
           }
@@ -297,6 +297,7 @@ class MURScheduler(
               (1 / tasksCompletePercent(maxTaskComletePercentIndex) - 1)).toLong
           }
           flagTaskCompletePercent = tasksCompletePercent(maxTaskComletePercentIndex)
+          maxTaskComletePercentIndex = 0
         }
         for (i <- 0 until runningTasksArray.length) {
           if (tasksCompletePercent(i) < flagTaskCompletePercent)
