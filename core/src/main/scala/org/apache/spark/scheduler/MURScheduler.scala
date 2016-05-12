@@ -190,6 +190,11 @@ class MURScheduler(
     redMemoryUsage = (total * 0.66 * 0.8).toLong
   }
 
+  var runningTasksArray: Array[Long] = null
+  var tasksMemoryConsumption: Array[Long] = null
+  var tasksMemoryUsage: Array[Long] = null
+  var tasksMemoryUsageRate: Array[Double] = null
+  var tasksCompletePercent: Array[Double] = null
   def computeStopTask(): Unit ={
     logInfo(s"Now Task: $stopIndex, $reStartIndex and running " + runningTasks.size())
     val memoryManager = env.memoryManager
@@ -208,7 +213,7 @@ class MURScheduler(
       lastPerMaxMemoryUsageJVM = perMemoryUsageJVM
     lastTotalMemoryUsageJVM = usedMemoryJVM
 
-    val freeMemoryJVM = (totalMemory * 0.66 - perMemoryUsageJVM).toLong
+    val freeMemoryJVM = totalMemory - perMemoryUsageJVM
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
     val freeMemory = memoryManager.maxStorageMemory - memoryManager.storageMemoryUsed
     logInfo(s"Memory usage.($usedMemoryJVM/$perMemoryUsageJVM/$usedMemory/$yellowMemoryUsage/$freeMemoryJVM/$freeMemory)")
@@ -222,15 +227,16 @@ class MURScheduler(
       logInfo(s"Memory pressure must be optimized.")
       if(ensureStop) {
         logInfo("Ensure stop")
-        val runningTasksArray = taskMURSample.getTasks()
-        val tasksMemoryConsumption = runningTasksArray.map(taskId => {
+
+        runningTasksArray = taskMURSample.getTasks()
+        tasksMemoryConsumption = runningTasksArray.map(taskId => {
           val taskMemoryManger = runningTasksMemoryManage.get(taskId)
           taskMemoryManger.getMemoryConsumptionForThisTask
         })
 
-        val tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
-        val tasksMemoryUsageRate = runningTasksArray.map(taskMURSample.getMemoryUsageRate(_))
-        val tasksCompletePercent = runningTasksArray.map(taskMURSample.getCompletePercent(_))
+        tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
+        tasksMemoryUsageRate = runningTasksArray.map(taskMURSample.getMemoryUsageRate(_))
+        tasksCompletePercent = runningTasksArray.map(taskMURSample.getCompletePercent(_))
         logInfo("memory usage: " + tasksMemoryUsage.mkString(","))
         logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
         logInfo("complete percent: " + tasksCompletePercent.mkString(","))
@@ -255,7 +261,7 @@ class MURScheduler(
             }
           }
           if(runningTasks.size() != 0) {
-            satisfyTasks -= lastPerMaxMemoryUsageJVM * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
+            satisfyTasks -= tasksMemoryConsumption(minMemoryUsageRateIndex) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
             stopTasksNum -= 1
           }
           flagMemoryUsageRate = tasksMemoryUsageRate(minMemoryUsageRateIndex)
