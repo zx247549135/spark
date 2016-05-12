@@ -213,7 +213,11 @@ class MURScheduler(
       lastPerMaxMemoryUsageJVM = perMemoryUsageJVM
     lastTotalMemoryUsageJVM = usedMemoryJVM
 
-    val freeMemoryJVM = totalMemory - perMemoryUsageJVM
+    val freeMemoryJVM =
+      if(lastPerMaxMemoryUsageJVM == perMemoryUsageJVM)
+        totalMemory - perMemoryUsageJVM
+      else
+        lastPerMaxMemoryUsageJVM - perMemoryUsageJVM
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
     val freeMemory = memoryManager.maxStorageMemory - memoryManager.storageMemoryUsed
     logInfo(s"Memory usage.($usedMemoryJVM/$perMemoryUsageJVM/$usedMemory/$yellowMemoryUsage/$freeMemoryJVM/$freeMemory)")
@@ -240,42 +244,64 @@ class MURScheduler(
         logInfo("memory usage: " + tasksMemoryUsage.mkString(","))
         logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
         logInfo("complete percent: " + tasksCompletePercent.mkString(","))
-//        val avgTasksMemoryComsumption = tasksMemoryConsumption.sum / runningTasks.size()
-//        var mostStopTasks = runningTasks.size() / 2
-//        for (i <- 0 until runningTasksArray.length) {
-//          if (tasksMemoryConsumption(i) < avgTasksMemoryComsumption && mostStopTasks > 0) {
-//            addStopTask(runningTasksArray(i))
-//            mostStopTasks -= 1
-//          }
-//        }
-        var flagMemoryUsageRate = Double.MinValue
-        var minMemoryUsageRateIndex = 0
+        //        val avgTasksMemoryComsumption = tasksMemoryConsumption.sum / runningTasks.size()
+        //        var mostStopTasks = runningTasks.size() / 2
+        //        for (i <- 0 until runningTasksArray.length) {
+        //          if (tasksMemoryConsumption(i) < avgTasksMemoryComsumption && mostStopTasks > 0) {
+        //            addStopTask(runningTasksArray(i))
+        //            mostStopTasks -= 1
+        //          }
+        //        }
+        //        var flagMemoryUsageRate = Double.MinValue
+        //        var minMemoryUsageRateIndex = 0
+        //        // var satisfyTasks = (freeMemoryJVM / (usedMemoryJVM / runningTasks.size())).toInt
+        //        var satisfyTasks = freeMemoryJVM * 0.8
+        //        var stopTasksNum = runningTasks.size()
+        //        while(satisfyTasks > 0){
+        //          for(i <- 0 until runningTasksArray.length){
+        //            if(tasksMemoryUsageRate(i) < tasksMemoryUsageRate(minMemoryUsageRateIndex)
+        //              && tasksMemoryUsageRate(i) > flagMemoryUsageRate){
+        //              minMemoryUsageRateIndex = i
+        //            }
+        //          }
+        //          if(runningTasks.size() != 0) {
+        //            satisfyTasks -= (lastPerMaxMemoryUsageJVM / runningTasks.size()) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
+        //            stopTasksNum -= 1
+        //          }
+        //          flagMemoryUsageRate = tasksMemoryUsageRate(minMemoryUsageRateIndex)
+        //        }
+        //        for(i <- 0 until runningTasksArray.length){
+        //          if(tasksMemoryUsageRate(i) > flagMemoryUsageRate)
+        //            addStopTask(runningTasksArray(i))
+        //        }
+        //        if(stopTasksNum < 0)
+        //          stopTasksNum = 0
+        //        logInfo("stopTaskNum: " + stopTasksNum)
+        //        for(i <- 0 until stopTasksNum){
+        //          addStopTask(runningTasksArray(i))
+        //        }
+
+        var flagTaskCompletePercent = 1.0
+        var maxTaskComletePercentIndex = 0
         // var satisfyTasks = (freeMemoryJVM / (usedMemoryJVM / runningTasks.size())).toInt
-        var satisfyTasks = freeMemoryJVM * 0.8
-        var stopTasksNum = runningTasks.size()
-        while(satisfyTasks > 0){
-          for(i <- 0 until runningTasksArray.length){
-            if(tasksMemoryUsageRate(i) < tasksMemoryUsageRate(minMemoryUsageRateIndex)
-              && tasksMemoryUsageRate(i) > flagMemoryUsageRate){
-              minMemoryUsageRateIndex = i
+        var satisfyTasks = freeMemoryJVM
+        while (satisfyTasks > 0) {
+          for (i <- 0 until runningTasksArray.length) {
+            if (tasksCompletePercent(i) >= tasksCompletePercent(maxTaskComletePercentIndex)
+              && tasksCompletePercent(i) < flagTaskCompletePercent) {
+              maxTaskComletePercentIndex = i
             }
           }
-          if(runningTasks.size() != 0) {
-            satisfyTasks -= (lastPerMaxMemoryUsageJVM / runningTasks.size()) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
-            stopTasksNum -= 1
+          if (runningTasks.size() != 0) {
+            satisfyTasks -= tasksMemoryUsage(maxTaskComletePercentIndex) * (1 / tasksCompletePercent(maxTaskComletePercentIndex) - 1)
           }
-          flagMemoryUsageRate = tasksMemoryUsageRate(minMemoryUsageRateIndex)
+          flagTaskCompletePercent = tasksCompletePercent(maxTaskComletePercentIndex)
         }
-//        for(i <- 0 until runningTasksArray.length){
-//          if(tasksMemoryUsageRate(i) > flagMemoryUsageRate)
-//            addStopTask(runningTasksArray(i))
-//        }
-        if(stopTasksNum < 0)
-          stopTasksNum = 0
-        logInfo("stopTaskNum: " + stopTasksNum)
-        for(i <- 0 until stopTasksNum){
-          addStopTask(runningTasksArray(i))
+        for (i <- 0 until runningTasksArray.length) {
+          if (tasksCompletePercent(i) < flagTaskCompletePercent)
+            addStopTask(runningTasksArray(i))
         }
+
         ensureStop = false
       }
     }else if(hasStopTask() && perMemoryUsageJVM < yellowMemoryUsage){
