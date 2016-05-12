@@ -261,7 +261,7 @@ class MURScheduler(
             }
           }
           if(runningTasks.size() != 0) {
-            satisfyTasks -= tasksMemoryConsumption(minMemoryUsageRateIndex) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
+            satisfyTasks -= (lastPerMaxMemoryUsageJVM / runningTasks.size()) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
             stopTasksNum -= 1
           }
           flagMemoryUsageRate = tasksMemoryUsageRate(minMemoryUsageRateIndex)
