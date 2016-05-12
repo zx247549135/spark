@@ -197,6 +197,16 @@ private[spark] class ExternalSorter[K, V, C](
       while (records.hasNext) {
         addElementsRead()
         val kv = records.next()
+        try{
+          val taskId = context.taskAttemptId()
+          val taskMURS = context.taskMURS()
+          if (taskMURS.getSampleFlag(taskId)) {
+            val estimatedSize = buffer.estimateSize()
+            taskMURS.updateShuffleSampleResult(taskId, estimatedSize)
+          }
+        } catch {
+          case e: Exception => logInfo(s"MURS5: $e")
+        }
         buffer.insert(getPartition(kv._1), kv._1, kv._2.asInstanceOf[C])
         maybeSpillCollection(usingMap = false)
       }

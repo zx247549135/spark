@@ -225,10 +225,10 @@ class MURScheduler(
           taskMemoryManger.getMemoryConsumptionForThisTask
         })
 
-        //val tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
+        val tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
         val tasksMemoryUsageRate = runningTasksArray.map(taskMURSample.getMemoryUsageRate(_))
         val tasksCompletePercent = runningTasksArray.map(taskMURSample.getCompletePercent(_))
-        //logInfo("memory usage : " + tasksMemoryUsage.mkString(","))
+        logInfo("memory usage : " + tasksMemoryUsage.mkString(","))
         logInfo("complete percent: " + tasksCompletePercent.mkString(","))
 //        val avgTasksMemoryComsumption = tasksMemoryConsumption.sum / runningTasks.size()
 //        var mostStopTasks = runningTasks.size() / 2
