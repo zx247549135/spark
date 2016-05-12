@@ -232,7 +232,7 @@ class MURScheduler(
         var minMemoryUsageRateIndex = 0
         // var satisfyTasks = (freeMemoryJVM / (usedMemoryJVM / runningTasks.size())).toInt
         var satisfyTasks = freeMemoryJVM * 0.8
-        var stopTasksNum = 0
+        var stopTasksNum = runningTasks.size()
         while(satisfyTasks > 0){
           for(i <- 0 until runningTasksArray.length){
             if(tasksMemoryUsageRate(i) < tasksMemoryUsageRate(minMemoryUsageRateIndex)
@@ -242,8 +242,8 @@ class MURScheduler(
           }
           // satisfyTasks -= tasksMemoryConsumption(minMemoryUsageRateIndex) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
           if(runningTasks.size() != 0) {
-            satisfyTasks -= (usedMemory / runningTasks.size())
-            stopTasksNum += 1
+            satisfyTasks -= (perMemoryUsageJVM / runningTasks.size()) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
+            stopTasksNum -= 1
           }
           flagMemoryUsageRate = tasksMemoryUsageRate(minMemoryUsageRateIndex)
         }
@@ -251,6 +251,9 @@ class MURScheduler(
 //          if(tasksMemoryUsageRate(i) > flagMemoryUsageRate)
 //            addStopTask(runningTasksArray(i))
 //        }
+        if(stopTasksNum < 0)
+          stopTasksNum = 0
+        logInfo("stopTaskNum: " + stopTasksNum)
         for(i <- 0 until stopTasksNum){
           addStopTask(runningTasksArray(i))
         }
