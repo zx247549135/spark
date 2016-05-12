@@ -266,14 +266,14 @@ class MURScheduler(
       removeAllStopTasks()
     }else if(hasStopTask() && perMemoryUsageJVM > redMemoryUsage){
       // spill will occur
-      val runningTasksArray = taskMURSample.getTasks()
-      val taskMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
-      if(taskMemoryUsage.sum != 0){
-        for(i <- 0 until runningTasksArray.length-3){
-          if(!shouldStop(runningTasksArray(i)))
-            addStopTask(runningTasksArray(i))
-        }
-      }
+//      val runningTasksArray = taskMURSample.getTasks()
+//      val taskMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
+//      if(taskMemoryUsage.sum != 0){
+//        for(i <- 0 until runningTasksArray.length-3){
+//          if(!shouldStop(runningTasksArray(i)))
+//            addStopTask(runningTasksArray(i))
+//        }
+//      }
     }
     lastTotalMemoryUsage = usedMemory
   }
