@@ -494,7 +494,7 @@ private[spark] class Executor(
     loop.breakable {
       for (taskRunner <- runningTasks.values().asScala) {
         if (taskRunner.task != null) {
-          if (taskRunner.task.isInstanceOf[ResultTask]) {
+          if (taskRunner.task.isInstanceOf[ResultTask[_,_]]) {
             murScheduler.setResultTask
             loop.break()
           }
