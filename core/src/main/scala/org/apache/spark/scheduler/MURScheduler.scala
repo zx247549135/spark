@@ -293,7 +293,7 @@ class MURScheduler(
             }
           }
           if (runningTasks.size() != 0) {
-            satisfyTasks -= tasksMemoryUsage(maxTaskComletePercentIndex) * (1 / tasksCompletePercent(maxTaskComletePercentIndex) - 1)
+            satisfyTasks -= (tasksMemoryUsage(maxTaskComletePercentIndex) * (1 / tasksCompletePercent(maxTaskComletePercentIndex) - 1)).toLong
           }
           flagTaskCompletePercent = tasksCompletePercent(maxTaskComletePercentIndex)
         }
