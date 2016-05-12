@@ -175,11 +175,13 @@ class MURScheduler(
   private var lastTotalMemoryUsageJVM: Long = 0
   private var lastTotalMemoryUsage: Long = 0
   private var ensureStop = false
+  private var redMemoryUsage: Long = 0
 
   def updateMemroyLine(total: Long, yellowLine: Long): Unit = {
     totalMemory = total
     lastTotalMemoryUsageJVM = total
     yellowMemoryUsage = yellowLine
+    redMemoryUsage = (total * 0.66 * 0.8).toLong
   }
 
   def computeStopTask(): Unit ={
@@ -216,6 +218,7 @@ class MURScheduler(
           taskMemoryManger.getMemoryConsumptionForThisTask
         })
 
+        val taskMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
         val tasksMemoryUsageRate = runningTasksArray.map(taskMURSample.getMemoryUsageRate(_))
         val tasksCompletePercent = runningTasksArray.map(taskMURSample.getCompletePercent(_))
         logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
@@ -240,7 +243,6 @@ class MURScheduler(
               minMemoryUsageRateIndex = i
             }
           }
-          // satisfyTasks -= tasksMemoryConsumption(minMemoryUsageRateIndex) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
           if(runningTasks.size() != 0) {
             satisfyTasks -= (perMemoryUsageJVM / runningTasks.size()) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
             stopTasksNum -= 1
@@ -251,7 +253,7 @@ class MURScheduler(
 //          if(tasksMemoryUsageRate(i) > flagMemoryUsageRate)
 //            addStopTask(runningTasksArray(i))
 //        }
-        if(stopTasksNum < 0)
+        if(stopTasksNum < 0 || taskMemoryUsage.sum == 0)
           stopTasksNum = 0
         logInfo("stopTaskNum: " + stopTasksNum)
         for(i <- 0 until stopTasksNum){
@@ -262,6 +264,16 @@ class MURScheduler(
     }else if(hasStopTask() && perMemoryUsageJVM < yellowMemoryUsage){
       // full gc has worked but task still stop
       removeAllStopTasks()
+    }else if(hasStopTask() && perMemoryUsageJVM > redMemoryUsage){
+      // spill will occur
+      val runningTasksArray = taskMURSample.getTasks()
+      val taskMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
+      if(taskMemoryUsage.sum != 0){
+        for(i <- 0 until runningTasksArray.length-3){
+          if(!shouldStop(runningTasksArray(i)))
+            addStopTask(runningTasksArray(i))
+        }
+      }
     }
     lastTotalMemoryUsage = usedMemory
   }
