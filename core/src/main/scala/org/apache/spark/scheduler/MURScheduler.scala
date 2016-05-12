@@ -208,6 +208,8 @@ class MURScheduler(
     if(!hasStopTask() && perMemoryUsageJVM > yellowMemoryUsage){
       if(usedMemory > lastTotalMemoryUsage)
         ensureStop = true
+      else if(usedMemory > freeMemory * 2)
+        ensureStop = true
 
       logInfo(s"Memory pressure must be optimized.")
       if(ensureStop) {
@@ -218,10 +220,10 @@ class MURScheduler(
           taskMemoryManger.getMemoryConsumptionForThisTask
         })
 
-        val taskMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
+        val tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
         val tasksMemoryUsageRate = runningTasksArray.map(taskMURSample.getMemoryUsageRate(_))
         val tasksCompletePercent = runningTasksArray.map(taskMURSample.getCompletePercent(_))
-        logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
+        logInfo("memory usage : " + tasksMemoryUsage.mkString(","))
         logInfo("complete percent: " + tasksCompletePercent.mkString(","))
 //        val avgTasksMemoryComsumption = tasksMemoryConsumption.sum / runningTasks.size()
 //        var mostStopTasks = runningTasks.size() / 2
@@ -253,7 +255,7 @@ class MURScheduler(
 //          if(tasksMemoryUsageRate(i) > flagMemoryUsageRate)
 //            addStopTask(runningTasksArray(i))
 //        }
-        if(stopTasksNum < 0 || taskMemoryUsage.sum == 0)
+        if(stopTasksNum < 0 || tasksMemoryUsage.sum == 0)
           stopTasksNum = 0
         logInfo("stopTaskNum: " + stopTasksNum)
         for(i <- 0 until stopTasksNum){
