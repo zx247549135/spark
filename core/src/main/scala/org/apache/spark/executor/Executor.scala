@@ -25,12 +25,12 @@ import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, HashMap}
-import scala.util.control.NonFatal
+import scala.util.control.{Breaks, NonFatal}
 
 import org.apache.spark._
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.memory.TaskMemoryManager
-import org.apache.spark.scheduler.{MURScheduler, DirectTaskResult, IndirectTaskResult, Task}
+import org.apache.spark.scheduler._
 import org.apache.spark.shuffle.FetchFailedException
 import org.apache.spark.storage.{StorageLevel, TaskResultBlockId}
 import org.apache.spark.util._
@@ -490,10 +490,17 @@ private[spark] class Executor(
    */
   private def updateMURSMessages(): Unit = {
 
-//    for (taskRunner <- runningTasks.values().asScala){
-//      if (taskRunner.task != null)
-//        murScheduler.showMessage(taskRunner.taskId)
-//    }
+    val loop = new Breaks
+    loop.breakable {
+      for (taskRunner <- runningTasks.values().asScala) {
+        if (taskRunner.task != null) {
+          if (taskRunner.task.isInstanceOf[ResultTask]) {
+            murScheduler.setResultTask
+            loop.break()
+          }
+        }
+      }
+    }
 
     // MURS update sample flag of all tasks to tell them that they should sample now
     murScheduler.updateAllSampleFlag()

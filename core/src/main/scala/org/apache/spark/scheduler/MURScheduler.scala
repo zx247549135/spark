@@ -176,6 +176,11 @@ class MURScheduler(
   private var lastTotalMemoryUsage: Long = 0
   private var ensureStop = false
   private var redMemoryUsage: Long = 0
+  private var isResultTask = false
+
+  def setResultTask: Unit ={
+    isResultTask = true
+  }
 
   def updateMemroyLine(total: Long, yellowLine: Long): Unit = {
     totalMemory = total
@@ -205,7 +210,7 @@ class MURScheduler(
     val freeMemory = memoryManager.maxStorageMemory - memoryManager.storageMemoryUsed
     logInfo(s"Memory usage.($usedMemoryJVM/$perMemoryUsageJVM/$usedMemory/$yellowMemoryUsage/$freeMemoryJVM/$freeMemory)")
 
-    if(!hasStopTask() && perMemoryUsageJVM > yellowMemoryUsage){
+    if(!hasStopTask() && perMemoryUsageJVM > yellowMemoryUsage && !isResultTask){
       if(usedMemory > lastTotalMemoryUsage)
         ensureStop = true
       else if(usedMemory > freeMemory * 2)
@@ -220,10 +225,10 @@ class MURScheduler(
           taskMemoryManger.getMemoryConsumptionForThisTask
         })
 
-        val tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
+        //val tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
         val tasksMemoryUsageRate = runningTasksArray.map(taskMURSample.getMemoryUsageRate(_))
         val tasksCompletePercent = runningTasksArray.map(taskMURSample.getCompletePercent(_))
-        logInfo("memory usage : " + tasksMemoryUsage.mkString(","))
+        //logInfo("memory usage : " + tasksMemoryUsage.mkString(","))
         logInfo("complete percent: " + tasksCompletePercent.mkString(","))
 //        val avgTasksMemoryComsumption = tasksMemoryConsumption.sum / runningTasks.size()
 //        var mostStopTasks = runningTasks.size() / 2
@@ -246,7 +251,7 @@ class MURScheduler(
             }
           }
           if(runningTasks.size() != 0) {
-            satisfyTasks -= (perMemoryUsageJVM / runningTasks.size()) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
+            satisfyTasks -= tasksMemoryConsumption(minMemoryUsageRateIndex) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
             stopTasksNum -= 1
           }
           flagMemoryUsageRate = tasksMemoryUsageRate(minMemoryUsageRateIndex)
@@ -255,7 +260,7 @@ class MURScheduler(
 //          if(tasksMemoryUsageRate(i) > flagMemoryUsageRate)
 //            addStopTask(runningTasksArray(i))
 //        }
-        if(stopTasksNum < 0 || tasksMemoryUsage.sum == 0)
+        if(stopTasksNum < 0)
           stopTasksNum = 0
         logInfo("stopTaskNum: " + stopTasksNum)
         for(i <- 0 until stopTasksNum){
