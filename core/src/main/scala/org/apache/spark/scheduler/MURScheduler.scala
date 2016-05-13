@@ -215,7 +215,7 @@ class MURScheduler(
 
     val freeMemoryJVM =
       if(lastPerMaxMemoryUsageJVM == perMemoryUsageJVM)
-        totalMemory - perMemoryUsageJVM
+        (totalMemory*0.66 - perMemoryUsageJVM).toLong
       else
         lastPerMaxMemoryUsageJVM - perMemoryUsageJVM
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
