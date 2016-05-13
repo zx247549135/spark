@@ -172,6 +172,7 @@ class MURScheduler(
   private var totalMemory: Long = 0
   private var yellowMemoryUsage: Long = 0
   private var perMemoryUsageJVM: Long = 0
+  private var lastPerMemoryUsageJVM: Long = 0
   private var lastPerMaxMemoryUsageJVM: Long = 0
   private var lastTotalMemoryUsageJVM: Long = 0
   private var lastTotalMemoryUsage: Long = 0
@@ -206,8 +207,16 @@ class MURScheduler(
     }
 
     val usedMemoryJVM = ManagementFactory.getMemoryMXBean.getHeapMemoryUsage.getUsed
+    // minor gc
     if(usedMemoryJVM < lastTotalMemoryUsageJVM){
       perMemoryUsageJVM = usedMemoryJVM
+    }
+    // full gc
+    var errorFullGC = 0L
+    if(perMemoryUsageJVM < lastPerMemoryUsageJVM){
+      errorFullGC = if(perMemoryUsageJVM > yellowMemoryUsage)
+        perMemoryUsageJVM - yellowMemoryUsage
+      else 0L
     }
     if(perMemoryUsageJVM > lastPerMaxMemoryUsageJVM)
       lastPerMaxMemoryUsageJVM = perMemoryUsageJVM
@@ -285,6 +294,8 @@ class MURScheduler(
         var maxTaskComletePercentIndex = 0
         // var satisfyTasks = (freeMemoryJVM / (usedMemoryJVM / runningTasks.size())).toInt
         var satisfyTasks = freeMemoryJVM
+        if(errorFullGC != 0L)
+          satisfyTasks -= errorFullGC
         while (satisfyTasks > 0) {
           for (i <- 0 until runningTasksArray.length) {
             if (tasksCompletePercent(i) >= tasksCompletePercent(maxTaskComletePercentIndex)
@@ -321,6 +332,7 @@ class MURScheduler(
 //      }
     }
     lastTotalMemoryUsage = usedMemory
+    lastPerMemoryUsageJVM = perMemoryUsageJVM
   }
 
 }
