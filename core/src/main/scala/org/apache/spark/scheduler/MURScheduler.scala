@@ -309,6 +309,8 @@ class MURScheduler(
           }
           flagTaskCompletePercent = tasksCompletePercent(maxTaskComletePercentIndex)
           maxTaskComletePercentIndex = 0
+          if(flagTaskCompletePercent == 0.0)
+            satisfyTasks = 0
         }
         for (i <- 0 until runningTasksArray.length) {
           if (tasksCompletePercent(i) < flagTaskCompletePercent)
