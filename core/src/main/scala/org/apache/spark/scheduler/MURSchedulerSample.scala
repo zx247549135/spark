@@ -260,10 +260,10 @@ class MURSchedulerSample extends Serializable with Logging{
       case 3 => getValue(taskRecordsRead_cogroup.get(taskId))
       case _ => 0
     }
-    val totalInputRecords = taskTotalRecords.get(taskId)
-    if(totalInputRecords != 0)
-      inputRecords.toDouble / totalInputRecords.toDouble
-    else
+//    val totalInputRecords = taskTotalRecords.get(taskId)
+//    if(totalInputRecords != 0)
+//      inputRecords.toDouble / totalInputRecords.toDouble
+//    else
       inputRecords.toDouble / 5400000
   }
 
