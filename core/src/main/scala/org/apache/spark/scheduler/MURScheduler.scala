@@ -300,6 +300,7 @@ class MURScheduler(
         var satisfyTasks = freeMemoryJVM
         if(errorFullGC != 0L)
           satisfyTasks -= errorFullGC
+        val minPercent = tasksCompletePercent.min
         while (satisfyTasks > 0) {
           for (i <- 0 until runningTasksArray.length) {
             if (tasksCompletePercent(i) >= tasksCompletePercent(maxTaskComletePercentIndex)
@@ -314,6 +315,8 @@ class MURScheduler(
           flagTaskCompletePercent = tasksCompletePercent(maxTaskComletePercentIndex)
           maxTaskComletePercentIndex = 0
           if(flagTaskCompletePercent == 0.0)
+            satisfyTasks = 0
+          else if(flagTaskCompletePercent == minPercent && satisfyTasks > 0)
             satisfyTasks = 0
         }
         for (i <- 0 until runningTasksArray.length) {

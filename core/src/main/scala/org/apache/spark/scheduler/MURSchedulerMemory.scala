@@ -5,7 +5,10 @@ import org.apache.spark.Logging
 /**
  * Created by zx on 16-5-20.
  */
-class MURSchedulerMemory(totalMemory: Long, yellowLine: Double, redLine: Double) extends Serializable with Logging{
+class MURSchedulerMemory(totalMemory: Long,
+                         yellowLine: Double,
+                         redLine: Double,
+                         mursSample: MURSchedulerSample) extends Serializable with Logging{
 
   val youngGeneration = (totalMemory * 0.33).toLong
   val oldGeneration = (totalMemory * 0.66).toLong
@@ -13,6 +16,8 @@ class MURSchedulerMemory(totalMemory: Long, yellowLine: Double, redLine: Double)
   val yellowMemory = (oldGeneration * yellowLine).toLong
   val redMemory = (oldGeneration * redLine).toLong
 
+  def buildMemoryUsage(runningTasks: Array[Long]): Unit ={
 
+  }
 
 }
