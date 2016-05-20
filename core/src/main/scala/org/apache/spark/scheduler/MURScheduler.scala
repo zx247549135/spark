@@ -302,10 +302,15 @@ class MURScheduler(
           satisfyTasks -= errorFullGC
         val minPercent = tasksCompletePercent.min
         while (satisfyTasks > 0) {
+          var firstCompareIndex = true
           for (i <- 0 until runningTasksArray.length) {
-            if (tasksCompletePercent(i) >= tasksCompletePercent(maxTaskComletePercentIndex)
-              && tasksCompletePercent(i) < flagTaskCompletePercent) {
-              maxTaskComletePercentIndex = i
+            if(tasksCompletePercent(i) < flagTaskCompletePercent){
+              if(firstCompareIndex) {
+                maxTaskComletePercentIndex = i
+                firstCompareIndex = false
+              }
+              if(tasksCompletePercent(i) >= tasksCompletePercent(maxTaskComletePercentIndex))
+                maxTaskComletePercentIndex = i
             }
           }
           if (runningTasks.size() != 0) {

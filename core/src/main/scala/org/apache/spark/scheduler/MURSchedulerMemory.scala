@@ -8,7 +8,7 @@ import org.apache.spark.Logging
 class MURSchedulerMemory(totalMemory: Long,
                          yellowLine: Double,
                          redLine: Double,
-                         mursSample: MURSchedulerSample) extends Serializable with Logging{
+                         murScheduler: MURScheduler) extends Serializable with Logging{
 
   val youngGeneration = (totalMemory * 0.33).toLong
   val oldGeneration = (totalMemory * 0.66).toLong
@@ -16,8 +16,8 @@ class MURSchedulerMemory(totalMemory: Long,
   val yellowMemory = (oldGeneration * yellowLine).toLong
   val redMemory = (oldGeneration * redLine).toLong
 
-  def buildMemoryUsage(runningTasks: Array[Long]): Unit ={
-
+  def buildMemoryUsage(): Unit ={
+    val murSample = murScheduler.taskMURSample
   }
 
 }
