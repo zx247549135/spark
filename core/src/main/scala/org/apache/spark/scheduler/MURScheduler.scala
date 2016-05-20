@@ -32,6 +32,8 @@ class MURScheduler(
 
   val taskMURSample = new MURSchedulerSample
 
+  private val isResultTask = new ConcurrentHashMap[Long, Boolean]()
+
   /**
    * Show sample message of one task
    *
@@ -67,6 +69,7 @@ class MURScheduler(
     runningTasksMemoryManage.put(taskId, taskMemoryManager)
     runningTasksSampleFlag.put(taskId, false)
     taskMURSample.registerTask(taskId)
+    isResultTask.put(taskId, false)
   }
 
   def removeFinishedTask(taskId: Long): Unit = {
@@ -75,6 +78,8 @@ class MURScheduler(
     runningTasks.remove(taskId)
     runningTasksSampleFlag.remove(taskId)
     taskMURSample.removeFinishedTask(taskId)
+    isResultTask.remove(taskId)
+
   }
 
   /**
@@ -178,10 +183,9 @@ class MURScheduler(
   private var lastTotalMemoryUsage: Long = 0
   private var ensureStop = false
   private var redMemoryUsage: Long = 0
-  private var isResultTask = false
 
-  def setResultTask: Unit ={
-    isResultTask = true
+  def setResultTask(taskId: Long): Unit ={
+    isResultTask.put(taskId, true)
   }
 
   def updateMemroyLine(total: Long, yellowLine: Long): Unit = {
@@ -231,7 +235,7 @@ class MURScheduler(
     val freeMemory = memoryManager.maxStorageMemory - memoryManager.storageMemoryUsed
     logInfo(s"Memory usage.($usedMemoryJVM/$perMemoryUsageJVM/$usedMemory/$yellowMemoryUsage/$freeMemoryJVM/$freeMemory)")
 
-    if(!hasStopTask() && perMemoryUsageJVM > yellowMemoryUsage && !isResultTask){
+    if(!hasStopTask() && perMemoryUsageJVM > yellowMemoryUsage){
       if(usedMemory > lastTotalMemoryUsage)
         ensureStop = true
       else if(usedMemoryJVM > redMemoryUsage)
@@ -313,7 +317,7 @@ class MURScheduler(
             satisfyTasks = 0
         }
         for (i <- 0 until runningTasksArray.length) {
-          if (tasksCompletePercent(i) < flagTaskCompletePercent)
+          if (tasksCompletePercent(i) < flagTaskCompletePercent && !isResultTask.get(runningTasksArray(i)))
             addStopTask(runningTasksArray(i))
         }
 

@@ -25,7 +25,7 @@ import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, HashMap}
-import scala.util.control.{Breaks, NonFatal}
+import scala.util.control.NonFatal
 
 import org.apache.spark._
 import org.apache.spark.deploy.SparkHadoopUtil
@@ -490,18 +490,6 @@ private[spark] class Executor(
    */
   private def updateMURSMessages(): Unit = {
 
-    val loop = new Breaks
-    loop.breakable {
-      for (taskRunner <- runningTasks.values().asScala) {
-        if (taskRunner.task != null) {
-          if (taskRunner.task.isInstanceOf[ResultTask[_,_]]) {
-            murScheduler.setResultTask
-            loop.break()
-          }
-        }
-      }
-    }
-
     // MURS update sample flag of all tasks to tell them that they should sample now
     murScheduler.updateAllSampleFlag()
 
@@ -511,6 +499,9 @@ private[spark] class Executor(
 
     for (taskRunner <- runningTasks.values().asScala) {
       if (taskRunner.task != null) {
+        if (taskRunner.task.isInstanceOf[ResultTask[_, _]]) {
+          murScheduler.setResultTask(taskRunner.taskId)
+        }
         taskRunner.task.metrics.foreach { metrics =>
           metrics.updateShuffleReadMetrics()
           metrics.updateInputMetrics()
