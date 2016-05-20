@@ -86,26 +86,32 @@ class MURSchedulerSample extends Serializable with Logging{
   }
 
   def updateReadRecordsInCache(taskId: Long, readRecords: Long): Unit = {
-    val recordsBuffer = taskRecordsRead_cache.get(taskId)
-    taskRecordsRead_cache.replace(taskId, recordsBuffer += readRecords)
+    appendValue(taskId, taskRecordsRead_cache, readRecords)
     currentTasksRecordsInputType.replace(taskId, 2)
   }
 
   def updateReadRecordsInCoCroup(taskId: Long, readRecords: Long): Unit = {
-    val recordsBuffer = taskRecordsRead_cogroup.get(taskId)
-    taskRecordsRead_cogroup.replace(taskId, recordsBuffer += readRecords)
+    appendValue(taskId, taskRecordsRead_cogroup, readRecords)
     currentTasksRecordsInputType.replace(taskId, 3)
   }
 
   def updateShuffleSampleResult(taskId: Long, sampleResult: Long): Unit = {
-    val taskMemoryUsageBuffer = taskShuffleMemoryUsage.get(taskId)
-    taskShuffleMemoryUsage.replace(taskId, taskMemoryUsageBuffer += sampleResult)
+    appendValue(taskId, taskShuffleMemoryUsage, sampleResult)
   }
 
   def updateCacheSampleResult(taskId: Long, sampleResult: Long): Unit = {
-    val taskCacheMemoryUsageBuffer = taskCacheMemoryUsage.get(taskId)
-    taskCacheMemoryUsage.replace(taskId, taskCacheMemoryUsageBuffer += sampleResult)
+    appendValue(taskId, taskCacheMemoryUsage, sampleResult)
     currentTasksMemoryUseType.replace(taskId, 1)
+  }
+
+  def appendValue(taskId: Long, mapWithBuffer: ConcurrentHashMap[Long, ArrayBuffer[Long]], value: Long): Unit = {
+    if(mapWithBuffer.containsKey(taskId)) {
+      val valueBuffer = mapWithBuffer.get(taskId)
+      if(valueBuffer.size >= 1024){
+        valueBuffer.remove(0, 512)
+      }
+      mapWithBuffer.replace(taskId, valueBuffer += value)
+    }
   }
 
   def updateTaskInformation(taskId: Long, taskMetrics: TaskMetrics): Unit = {
@@ -132,19 +138,12 @@ class MURSchedulerSample extends Serializable with Logging{
     if(taskMetrics.shuffleWriteMetrics.isDefined)
       bytesShuffleWrite = taskMetrics.shuffleWriteMetrics.get.shuffleBytesWritten
 
-    def appendValue(mapWithBuffer: ConcurrentHashMap[Long, ArrayBuffer[Long]], value: Long): Unit = {
-      if(mapWithBuffer.containsKey(taskId)) {
-        val valueBuffer = mapWithBuffer.get(taskId)
-        mapWithBuffer.replace(taskId, valueBuffer += value)
-      }
-    }
-
-    appendValue(taskBytesRead_input, bytesRead_input)
-    appendValue(taskBytesRead_shuffle, bytesRead_shuffle)
-    appendValue(taskRecordsRead_input, recordsRead_input)
-    appendValue(taskRecordsRead_shuffle, recordsRead_shuffle)
-    appendValue(taskBytesOutput, bytesOutput)
-    appendValue(taskBytesShuffleWrite, bytesShuffleWrite)
+    appendValue(taskId, taskBytesRead_input, bytesRead_input)
+    appendValue(taskId, taskBytesRead_shuffle, bytesRead_shuffle)
+    appendValue(taskId, taskRecordsRead_input, recordsRead_input)
+    appendValue(taskId, taskRecordsRead_shuffle, recordsRead_shuffle)
+    appendValue(taskId, taskBytesOutput, bytesOutput)
+    appendValue(taskId, taskBytesShuffleWrite, bytesShuffleWrite)
 
   }
 
