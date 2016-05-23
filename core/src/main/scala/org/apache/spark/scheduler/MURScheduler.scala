@@ -240,6 +240,8 @@ class MURScheduler(
         ensureStop = true
       else if(usedMemoryJVM > redMemoryUsage)
         ensureStop = true
+      else if(usedMemoryJVM > yellowMemoryUsage * 2)
+        ensureStop = true
 
       logInfo(s"Memory pressure must be optimized.")
       if(ensureStop) {
