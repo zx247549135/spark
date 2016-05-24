@@ -34,6 +34,8 @@ class MURScheduler(
 
   private val isResultTask = new ConcurrentHashMap[Long, Boolean]()
 
+  private val multiTasks = conf.getDouble("spark.murs.multiTasks", 1.0)
+
   /**
    * Show sample message of one task
    *
@@ -326,10 +328,17 @@ class MURScheduler(
           else if(flagTaskCompletePercent == minPercent && satisfyTasks > 0)
             satisfyTasks = 0
         }
+        var stopCount = 0
         for (i <- 0 until runningTasksArray.length) {
-          if (tasksCompletePercent(i) < flagTaskCompletePercent && !isResultTask.get(runningTasksArray(i)))
+          if (tasksCompletePercent(i) < flagTaskCompletePercent && !isResultTask.get(runningTasksArray(i))) {
             addStopTask(runningTasksArray(i))
+            stopCount += 1
+          }
         }
+        if(stopCount >= 8)
+          conf.set("spark.murs.multiTasks", "0.8")
+        else if(stopCount <= 1)
+          conf.set("spark.murs.multiTasks", "" + multiTasks)
 
         ensureStop = false
       }
