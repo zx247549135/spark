@@ -246,7 +246,7 @@ class MURScheduler(
         ensureStop = true
 
       logInfo(s"Memory pressure must be optimized.")
-      if(ensureStop) {
+      if(ensureStop && runningTasks.size() > 0) {
         logInfo("Ensure stop")
 
         runningTasksArray = taskMURSample.getTasks()
