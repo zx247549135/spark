@@ -261,45 +261,9 @@ class MURScheduler(
         logInfo("memory usage: " + tasksMemoryUsage.mkString(","))
         logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
         logInfo("complete percent: " + tasksCompletePercent.mkString(","))
-        //        val avgTasksMemoryComsumption = tasksMemoryConsumption.sum / runningTasks.size()
-        //        var mostStopTasks = runningTasks.size() / 2
-        //        for (i <- 0 until runningTasksArray.length) {
-        //          if (tasksMemoryConsumption(i) < avgTasksMemoryComsumption && mostStopTasks > 0) {
-        //            addStopTask(runningTasksArray(i))
-        //            mostStopTasks -= 1
-        //          }
-        //        }
-        //        var flagMemoryUsageRate = Double.MinValue
-        //        var minMemoryUsageRateIndex = 0
-        //        // var satisfyTasks = (freeMemoryJVM / (usedMemoryJVM / runningTasks.size())).toInt
-        //        var satisfyTasks = freeMemoryJVM * 0.8
-        //        var stopTasksNum = runningTasks.size()
-        //        while(satisfyTasks > 0){
-        //          for(i <- 0 until runningTasksArray.length){
-        //            if(tasksMemoryUsageRate(i) < tasksMemoryUsageRate(minMemoryUsageRateIndex)
-        //              && tasksMemoryUsageRate(i) > flagMemoryUsageRate){
-        //              minMemoryUsageRateIndex = i
-        //            }
-        //          }
-        //          if(runningTasks.size() != 0) {
-        //            satisfyTasks -= (lastPerMaxMemoryUsageJVM / runningTasks.size()) * ( 1 / tasksCompletePercent(minMemoryUsageRateIndex) - 1)
-        //            stopTasksNum -= 1
-        //          }
-        //          flagMemoryUsageRate = tasksMemoryUsageRate(minMemoryUsageRateIndex)
-        //        }
-        //        for(i <- 0 until runningTasksArray.length){
-        //          if(tasksMemoryUsageRate(i) > flagMemoryUsageRate)
-        //            addStopTask(runningTasksArray(i))
-        //        }
-        //        if(stopTasksNum < 0)
-        //          stopTasksNum = 0
-        //        logInfo("stopTaskNum: " + stopTasksNum)
-        //        for(i <- 0 until stopTasksNum){
-        //          addStopTask(runningTasksArray(i))
-        //        }
 
         var flagTaskCompletePercent = 1.0
-        var maxTaskComletePercentIndex = 0
+        var maxTaskCompletePercentIndex = 0
         // var satisfyTasks = (freeMemoryJVM / (usedMemoryJVM / runningTasks.size())).toInt
         var satisfyTasks = freeMemoryJVM
         if(errorFullGC != 0L)
@@ -310,19 +274,19 @@ class MURScheduler(
           for (i <- 0 until runningTasksArray.length) {
             if(tasksCompletePercent(i) < flagTaskCompletePercent){
               if(firstCompareIndex) {
-                maxTaskComletePercentIndex = i
+                maxTaskCompletePercentIndex = i
                 firstCompareIndex = false
               }
-              if(tasksCompletePercent(i) >= tasksCompletePercent(maxTaskComletePercentIndex))
-                maxTaskComletePercentIndex = i
+              if(tasksCompletePercent(i) >= tasksCompletePercent(maxTaskCompletePercentIndex))
+                maxTaskCompletePercentIndex = i
             }
           }
           if (runningTasks.size() != 0) {
-            satisfyTasks -= (tasksMemoryUsage(maxTaskComletePercentIndex) * 2 *
-              (1 / tasksCompletePercent(maxTaskComletePercentIndex) - 1)).toLong
+            satisfyTasks -= (tasksMemoryUsage(maxTaskCompletePercentIndex) * 2 *
+              (1 / tasksCompletePercent(maxTaskCompletePercentIndex) - 1)).toLong
           }
-          flagTaskCompletePercent = tasksCompletePercent(maxTaskComletePercentIndex)
-          maxTaskComletePercentIndex = 0
+          flagTaskCompletePercent = tasksCompletePercent(maxTaskCompletePercentIndex)
+          maxTaskCompletePercentIndex = 0
           if(flagTaskCompletePercent == 0.0)
             satisfyTasks = 0
           else if(flagTaskCompletePercent == minPercent && satisfyTasks > 0)
@@ -339,6 +303,15 @@ class MURScheduler(
           conf.set("spark.murs.multiTasks", "0.8")
         else if(stopCount <= 1)
           conf.set("spark.murs.multiTasks", "" + multiTasks)
+
+        var freeMemoryBeforSpill = freeMemory
+        for(i <- 0 until runningTasksArray.length){
+          if(!shouldStop(runningTasksArray(i))){
+            freeMemoryBeforSpill -= 2 * tasksMemoryConsumption(i)
+            if(freeMemoryBeforSpill < 0)
+              addStopTask(runningTasksArray(i))
+          }
+        }
 
         ensureStop = false
       }
