@@ -304,9 +304,15 @@ class MURScheduler(
         else if(stopCount <= 1)
           conf.set("spark.murs.multiTasks", "" + multiTasks)
 
+        val necessaryMemory = new Array[Long](runningTasksArray.length)
+        for(i <- 0 until runningTasksArray.length){
+          val needMemory = (tasksMemoryUsage(maxTaskCompletePercentIndex) * 2 *
+            (1 / tasksCompletePercent(maxTaskCompletePercentIndex))).toLong
+          necessaryMemory.update(i, needMemory)
+        }
         var freeMemoryBeforSpill = freeMemory
         for(i <- 0 until runningTasksArray.length){
-          if(!shouldStop(runningTasksArray(i))){
+          if(!shouldStop(runningTasksArray(i)) && necessaryMemory(i) > tasksMemoryConsumption(i)){
             freeMemoryBeforSpill -= 2 * tasksMemoryConsumption(i)
             if(freeMemoryBeforSpill < 0)
               addStopTask(runningTasksArray(i))
