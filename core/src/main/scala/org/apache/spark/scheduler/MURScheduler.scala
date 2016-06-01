@@ -313,11 +313,11 @@ class MURScheduler(
           else false
           willTasksSpill.update(i, willSpill)
         }
-        var freeMemoryBeforSpill = freeMemory
+        var freeMemoryBeforeSpill = freeMemory
         for(i <- 0 until runningTasksArray.length){
           if(!shouldStop(runningTasksArray(i)) && willTasksSpill(i)){
-            freeMemoryBeforSpill -= 2 * tasksMemoryConsumption(i)
-            if(freeMemoryBeforSpill < 0)
+            freeMemoryBeforeSpill -= 2 * tasksMemoryConsumption(i)
+            if(freeMemoryBeforeSpill < 0)
               addStopTask(runningTasksArray(i))
           }
         }
