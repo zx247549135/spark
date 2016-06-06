@@ -51,7 +51,8 @@ private[spark] case class ArrayValues(buffer: Array[Any]) extends BlockValues
 private[spark] class BlockResult(
     val data: Iterator[Any],
     val readMethod: DataReadMethod.Value,
-    val bytes: Long)
+    val bytes: Long,
+    var records: Long = 0)
 
 /**
  * Manager running on every node (driver and executors) which provides interfaces for putting and
@@ -466,7 +467,7 @@ private[spark] class BlockManager(
         if (level.useMemory) {
           logDebug(s"Getting block $blockId from memory")
           val result = if (asBlockResult) {
-            memoryStore.getValues(blockId).map(new BlockResult(_, DataReadMethod.Memory, info.size))
+            memoryStore.getValues(blockId).map(new BlockResult(_, DataReadMethod.Memory, info.size, memoryStore.getMursRecords(blockId)))
           } else {
             memoryStore.getBytes(blockId)
           }
@@ -512,7 +513,7 @@ private[spark] class BlockManager(
             // If the block shouldn't be stored in memory, we can just return it
             if (asBlockResult) {
               return Some(new BlockResult(dataDeserialize(blockId, bytes), DataReadMethod.Disk,
-                info.size))
+                info.size, memoryStore.getMursRecords(blockId)))
             } else {
               return Some(bytes)
             }
@@ -544,13 +545,13 @@ private[spark] class BlockManager(
                 // space to unroll the block. Either way, the put here should return an iterator.
                 putResult.data match {
                   case Left(it) =>
-                    return Some(new BlockResult(it, DataReadMethod.Disk, info.size))
+                    return Some(new BlockResult(it, DataReadMethod.Disk, info.size, putResult.records))
                   case _ =>
                     // This only happens if we dropped the values back to disk (which is never)
                     throw new SparkException("Memory store did not return an iterator!")
                 }
               } else {
-                return Some(new BlockResult(values, DataReadMethod.Disk, info.size))
+                return Some(new BlockResult(values, DataReadMethod.Disk, info.size, memoryStore.getMursRecords(blockId)))
               }
             }
           }

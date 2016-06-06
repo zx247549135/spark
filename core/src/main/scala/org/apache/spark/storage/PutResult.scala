@@ -29,4 +29,5 @@ import java.nio.ByteBuffer
 private[spark] case class PutResult(
     size: Long,
     data: Either[Iterator[_], ByteBuffer],
-    droppedBlocks: Seq[(BlockId, BlockStatus)] = Seq.empty)
+    droppedBlocks: Seq[(BlockId, BlockStatus)] = Seq.empty,
+    val records: Long = 0)

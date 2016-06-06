@@ -117,8 +117,8 @@ class MURScheduler(
     taskMURSample.updateTotalRecords(taskId, totalRecords)
 
   // this method will only be used in cache operation
-  def updateReadRecordsInCache(taskId: Long, readRecords: Long) =
-    taskMURSample.updateReadRecordsInCache(taskId, readRecords)
+  def updateWriteRecordsInCache(taskId: Long, readRecords: Long) =
+    taskMURSample.updateWriteRecordsInCache(taskId, readRecords)
 
   // this method will only be used in cogroup operation
   def updateReadRecordsInCoCroup(taskId: Long, readRecords: Long) =

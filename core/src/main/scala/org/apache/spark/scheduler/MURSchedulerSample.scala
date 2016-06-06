@@ -21,7 +21,7 @@ class MURSchedulerSample extends Serializable with Logging{
   private val taskTotalRecords = new ConcurrentHashMap[Long, Long]
   private val taskRecordsRead_input = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
   private val taskRecordsRead_shuffle = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
-  private val taskRecordsRead_cache = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
+  private val taskRecordsWrite_cache = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
   private val taskRecordsRead_cogroup = new ConcurrentHashMap[Long, ArrayBuffer[Long]]
 
   // total bytes write by this task, shuffle write and output are two different ways
@@ -46,7 +46,7 @@ class MURSchedulerSample extends Serializable with Logging{
     taskTotalRecords.put(taskId, 0L)
     taskRecordsRead_input.put(taskId, new ArrayBuffer[Long])
     taskRecordsRead_shuffle.put(taskId, new ArrayBuffer[Long])
-    taskRecordsRead_cache.put(taskId, new ArrayBuffer[Long])
+    taskRecordsWrite_cache.put(taskId, new ArrayBuffer[Long])
     taskRecordsRead_cogroup.put(taskId, new ArrayBuffer[Long])
 
     taskBytesOutput.put(taskId, new ArrayBuffer[Long])
@@ -67,7 +67,7 @@ class MURSchedulerSample extends Serializable with Logging{
     taskTotalRecords.remove(taskId)
     taskRecordsRead_input.remove(taskId)
     taskRecordsRead_shuffle.remove(taskId)
-    taskRecordsRead_cache.remove(taskId)
+    taskRecordsWrite_cache.remove(taskId)
     taskRecordsRead_cogroup.remove(taskId)
 
     taskBytesOutput.remove(taskId)
@@ -85,8 +85,8 @@ class MURSchedulerSample extends Serializable with Logging{
     taskTotalRecords.replace(taskId, totalRecords)
   }
 
-  def updateReadRecordsInCache(taskId: Long, readRecords: Long): Unit = {
-    appendValue(taskId, taskRecordsRead_cache, readRecords)
+  def updateWriteRecordsInCache(taskId: Long, readRecords: Long): Unit = {
+    appendValue(taskId, taskRecordsWrite_cache, readRecords)
     currentTasksRecordsInputType.replace(taskId, 2)
   }
 
@@ -172,7 +172,7 @@ class MURSchedulerSample extends Serializable with Logging{
 
   def getRecordsReadInput(taskId: Long) = getValue(taskRecordsRead_input.get(taskId))
   def getRecordsReadShuffle(taskId: Long) = getValue(taskRecordsRead_shuffle.get(taskId))
-  def getRecordsReadCache(taskId: Long) = getValue(taskRecordsRead_cache.get(taskId))
+  def getRecordsReadCache(taskId: Long) = getValue(taskRecordsWrite_cache.get(taskId))
   def getRecordsReadCogroup(taskId: Long) = getValue(taskRecordsRead_cogroup.get(taskId))
 
   def getBytesOutput(taskId: Long) = getValue(taskBytesOutput.get(taskId))
@@ -233,7 +233,7 @@ class MURSchedulerSample extends Serializable with Logging{
     val deltaInputRecords = currentTasksRecordsInputType.get(taskId) match{
       case 0 => getDeltaValue(taskRecordsRead_input.get(taskId))
       case 1 => getDeltaValue(taskRecordsRead_shuffle.get(taskId))
-      case 2 => getDeltaValue(taskRecordsRead_cache.get(taskId))
+      case 2 => getDeltaValue(taskRecordsWrite_cache.get(taskId))
       case 3 => getDeltaValue(taskRecordsRead_cogroup.get(taskId))
       case _ => 0.0
     }
@@ -255,14 +255,14 @@ class MURSchedulerSample extends Serializable with Logging{
     val inputRecords = currentTasksRecordsInputType.get(taskId) match{
       case 0 => getValue(taskRecordsRead_input.get(taskId))
       case 1 => getValue(taskRecordsRead_shuffle.get(taskId))
-      case 2 => getValue(taskRecordsRead_cache.get(taskId))
+      case 2 => getValue(taskRecordsWrite_cache.get(taskId))
       case 3 => getValue(taskRecordsRead_cogroup.get(taskId))
       case _ => 0
     }
-//    val totalInputRecords = taskTotalRecords.get(taskId)
-//    if(totalInputRecords != 0)
-//      inputRecords.toDouble / totalInputRecords.toDouble
-//    else
+    val totalInputRecords = taskTotalRecords.get(taskId)
+    if(totalInputRecords != 0)
+      inputRecords.toDouble / totalInputRecords.toDouble
+    else
       inputRecords.toDouble / 5400000
   }
 

@@ -19,6 +19,7 @@ package org.apache.spark.storage
 
 import java.nio.ByteBuffer
 import java.util.LinkedHashMap
+import java.util.concurrent.ConcurrentHashMap
 
 import org.apache.spark.scheduler.MURScheduler
 
@@ -150,6 +151,18 @@ private[spark] class MemoryStore(blockManager: BlockManager, memoryManager: Memo
   }
 
   /**
+   * MURS: Each block in memory will remember its records
+   */
+  val mursPutRecords = new ConcurrentHashMap[BlockId, Long]
+
+  def getMursRecords(blockId: BlockId): Long ={
+    if(mursPutRecords.contains(blockId))
+      mursPutRecords.get(blockId)
+    else
+      0
+  }
+
+  /**
    * Attempt to put the given block in memory store.
    *
    * There may not be enough space to fully unroll the iterator in memory, in which case we
@@ -161,6 +174,7 @@ private[spark] class MemoryStore(blockManager: BlockManager, memoryManager: Memo
    * back from disk and attempts to cache it in memory. In this case, we should not persist the
    * block back on disk again, as it is already in disk store.
    */
+
   private[storage] def putIterator(
       blockId: BlockId,
       values: Iterator[Any],
@@ -174,15 +188,15 @@ private[spark] class MemoryStore(blockManager: BlockManager, memoryManager: Memo
         // Values are fully unrolled in memory, so store them as an array
         val res = putArray(blockId, arrayValues, level, returnValues)
         droppedBlocks ++= res.droppedBlocks
-        PutResult(res.size, res.data, droppedBlocks)
+        PutResult(res.size, res.data, droppedBlocks, getMursRecords(blockId))
       case Right(iteratorValues) =>
         // Not enough space to unroll this block; drop to disk if applicable
         if (level.useDisk && allowPersistToDisk) {
           logWarning(s"Persisting block $blockId to disk instead.")
           val res = blockManager.diskStore.putIterator(blockId, iteratorValues, level, returnValues)
-          PutResult(res.size, res.data, droppedBlocks)
+          PutResult(res.size, res.data, droppedBlocks, getMursRecords(blockId))
         } else {
-          PutResult(0, Left(iteratorValues), droppedBlocks)
+          PutResult(0, Left(iteratorValues), droppedBlocks, getMursRecords(blockId))
         }
     }
   }
@@ -250,7 +264,7 @@ private[spark] class MemoryStore(blockManager: BlockManager, memoryManager: Memo
    */
   def unrollSafely(
       blockId: BlockId,
-      values1: Iterator[Any],
+      values: Iterator[Any],
       droppedBlocks: ArrayBuffer[(BlockId, BlockStatus)])
     : Either[Array[Any], Iterator[Any]] = {
 
@@ -282,17 +296,14 @@ private[spark] class MemoryStore(blockManager: BlockManager, memoryManager: Memo
 
     // Unroll this block safely, checking whether we have exceeded our threshold periodically
     try {
-      var recordsNum = 0
-      val (values, values2) = values1.duplicate
-      val totalRecords = values2.size
+      var putRecordsNum = 0
       while (values.hasNext && keepUnrolling) {
         vector += values.next()
-        recordsNum += 1
+        putRecordsNum += 1
         try {
           val taskMURS = currentTaskMURS()
           if(taskMURS.getSampleFlag(taskId)){
-            taskMURS.updateTotalRecords(taskId, totalRecords)
-            taskMURS.updateReadRecordsInCache(taskId, recordsNum)
+            taskMURS.updateWriteRecordsInCache(taskId, putRecordsNum)
             taskMURS.updateCacheSampleResult(taskId, vector.estimateSize())
             taskMURS.updateSingleTaskSampleFlag(taskId)
           }
@@ -312,6 +323,7 @@ private[spark] class MemoryStore(blockManager: BlockManager, memoryManager: Memo
         }
         elementsUnrolled += 1
       }
+      mursPutRecords.put(blockId, putRecordsNum)
 
       if (keepUnrolling) {
         // We successfully unrolled the entirety of this block
