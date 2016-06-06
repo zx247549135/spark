@@ -49,7 +49,7 @@ private[spark] class CacheManager(blockManager: BlockManager) extends Logging {
         existingMetrics.incBytesRead(blockResult.bytes)
         context.taskMURS().updateTotalRecords(context.taskAttemptId(), blockResult.records)
 
-        val (iter, iter2) = blockResult.data.asInstanceOf[Iterator[T]]
+        val iter = blockResult.data.asInstanceOf[Iterator[T]]
         new InterruptibleIterator[T](context, iter) {
           override def next(): T = {
             existingMetrics.incRecordsRead(1)
