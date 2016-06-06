@@ -138,6 +138,12 @@ class MURScheduler(
     taskMURSample.updateTaskInformation(taskId, taskMetrics)
   }
 
+  // the shuffleTask has all memory usage and begin write to disk
+  // we set the percent to 1
+  def updateShuffleWrite(taskId: Long): Unit ={
+    taskMURSample.addDoingShuffleWrite(taskId)
+  }
+
   /**
    * Scheduler Implementation
    *
@@ -304,24 +310,6 @@ class MURScheduler(
         else if(stopCount <= 1)
           conf.set("spark.murs.multiTasks", "" + multiTasks)
 
-        val willTasksSpill = new Array[Boolean](runningTasksArray.length)
-        for(i <- 0 until runningTasksArray.length){
-          val needMemory = (tasksMemoryUsage(i) * 2 *
-            (1 / tasksCompletePercent(i))).toLong
-          val willSpill = if(needMemory > tasksMemoryConsumption(i) * 0.8 && tasksCompletePercent(i) < 0.8)
-            true
-          else false
-          willTasksSpill.update(i, willSpill)
-        }
-        var freeMemoryBeforeSpill = freeMemory
-        for(i <- 0 until runningTasksArray.length){
-          if(!shouldStop(runningTasksArray(i)) && willTasksSpill(i)){
-            freeMemoryBeforeSpill -= 2 * tasksMemoryConsumption(i)
-            if(freeMemoryBeforeSpill < 0)
-              addStopTask(runningTasksArray(i))
-          }
-        }
-
         ensureStop = false
       }
     }else if(hasStopTask() && perMemoryUsageJVM < yellowMemoryUsage){
@@ -337,6 +325,23 @@ class MURScheduler(
 //            addStopTask(runningTasksArray(i))
 //        }
 //      }
+      val willTasksSpill = new Array[Boolean](runningTasksArray.length)
+      for(i <- 0 until runningTasksArray.length){
+        val needMemory = (tasksMemoryUsage(i) * 2 *
+          (1 / tasksCompletePercent(i))).toLong
+        val willSpill = if(needMemory > tasksMemoryConsumption(i) * 0.8 && tasksCompletePercent(i) < 0.8)
+          true
+        else false
+        willTasksSpill.update(i, willSpill)
+      }
+      var freeMemoryBeforeSpill = freeMemory
+      for(i <- 0 until runningTasksArray.length){
+        if(!shouldStop(runningTasksArray(i)) && willTasksSpill(i)){
+          freeMemoryBeforeSpill -= 2 * tasksMemoryConsumption(i)
+          if(freeMemoryBeforeSpill < 0)
+            addStopTask(runningTasksArray(i))
+        }
+      }
     }
     lastTotalMemoryUsage = usedMemory
     lastPerMemoryUsageJVM = perMemoryUsageJVM

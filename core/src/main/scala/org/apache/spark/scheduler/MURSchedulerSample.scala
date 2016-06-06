@@ -251,7 +251,16 @@ class MURSchedulerSample extends Serializable with Logging{
       0.0
   }
 
+  private val doingShuffleWrite = new ConcurrentHashMap[Long, Boolean]
+  def addDoingShuffleWrite(taskId: Long): Unit ={
+    doingShuffleWrite.put(taskId, true)
+  }
+
   def getCompletePercent(taskId: Long): Double = {
+    if(doingShuffleWrite.contains(taskId)){
+      doingShuffleWrite.remove(taskId)
+      return 1.0
+    }
     val inputRecords = currentTasksRecordsInputType.get(taskId) match{
       case 0 => getValue(taskRecordsRead_input.get(taskId))
       case 1 => getValue(taskRecordsRead_shuffle.get(taskId))
