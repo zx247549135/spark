@@ -277,28 +277,30 @@ class MURScheduler(
         var stopCount = runningTasksArray.length
         var flagTaskCompletePercent = 1.0
         var maxTaskCompletePercentIndex = 0
-        while (stopCount > testStopTaskNum) {
-          var firstCompareIndex = true
-          for (i <- 0 until runningTasksArray.length) {
-            if (tasksCompletePercent(i) < flagTaskCompletePercent) {
-              if (firstCompareIndex) {
-                maxTaskCompletePercentIndex = i
-                firstCompareIndex = false
+        if(runningTasksArray.length >= testStopTaskNum) {
+          while (stopCount > testStopTaskNum) {
+            var firstCompareIndex = true
+            for (i <- 0 until runningTasksArray.length) {
+              if (tasksCompletePercent(i) < flagTaskCompletePercent) {
+                if (firstCompareIndex) {
+                  maxTaskCompletePercentIndex = i
+                  firstCompareIndex = false
+                }
+                if (tasksCompletePercent(i) >= tasksCompletePercent(maxTaskCompletePercentIndex))
+                  maxTaskCompletePercentIndex = i
               }
-              if (tasksCompletePercent(i) >= tasksCompletePercent(maxTaskCompletePercentIndex))
-                maxTaskCompletePercentIndex = i
             }
+            if (runningTasks.size() != 0) {
+              stopCount -= 1
+            }
+            flagTaskCompletePercent = tasksCompletePercent(maxTaskCompletePercentIndex)
+            maxTaskCompletePercentIndex = 0
           }
-          if (runningTasks.size() != 0) {
-            stopCount -= 1
-          }
-          flagTaskCompletePercent = tasksCompletePercent(maxTaskCompletePercentIndex)
-          maxTaskCompletePercentIndex = 0
-        }
 
-        for (i <- 0 until runningTasksArray.length) {
-          if (tasksCompletePercent(i) < flagTaskCompletePercent && !isResultTask.get(runningTasksArray(i))) {
-            addStopTask(runningTasksArray(i))
+          for (i <- 0 until runningTasksArray.length) {
+            if (tasksCompletePercent(i) < flagTaskCompletePercent && !isResultTask.get(runningTasksArray(i))) {
+              addStopTask(runningTasksArray(i))
+            }
           }
         }
 
