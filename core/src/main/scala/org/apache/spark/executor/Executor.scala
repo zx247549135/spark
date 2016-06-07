@@ -538,6 +538,9 @@ private[spark] class Executor(
     val yellowMemoryUsage = (totalMemory * 0.66 * yellowLine).toLong
     murScheduler.updateMemroyLine(totalMemory.toLong, yellowMemoryUsage)
 
+    val stopTaskNumTest = conf.getInt("spark.murs.stopTest", 8)
+    murScheduler.setTestStopNum(stopTaskNumTest)
+
     val intervalMs = conf.getTimeAsMs("spark.murs.samplingInterval", "200ms")
 
     // Wait a random interval so the sampling don't end up in sync

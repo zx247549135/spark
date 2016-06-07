@@ -203,6 +203,12 @@ class MURScheduler(
     redMemoryUsage = (total * 0.66 * 0.8).toLong
   }
 
+  private var testStopTaskNum: Int = 8
+
+  def setTestStopNum(stopNum: Int): Unit ={
+    testStopTaskNum = stopNum
+  }
+
   var runningTasksArray: Array[Long] = null
   var tasksMemoryConsumption: Array[Long] = null
   var tasksMemoryUsage: Array[Long] = null
@@ -255,10 +261,23 @@ class MURScheduler(
       if (ensureStop && runningTasks.size() > 0) {
         logInfo("Ensure stop")
 
-        var stopCount = 0
+        runningTasksArray = taskMURSample.getTasks()
+        tasksMemoryConsumption = runningTasksArray.map(taskId => {
+          val taskMemoryManger = runningTasksMemoryManage.get(taskId)
+          taskMemoryManger.getMemoryConsumptionForThisTask
+        })
+
+        tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
+        tasksMemoryUsageRate = runningTasksArray.map(taskMURSample.getMemoryUsageRate(_))
+        tasksCompletePercent = runningTasksArray.map(taskMURSample.getCompletePercent(_))
+        logInfo("memory usage: " + tasksMemoryUsage.mkString(","))
+        logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
+        logInfo("complete percent: " + tasksCompletePercent.mkString(","))
+
+        var stopCount = runningTasksArray.length
         var flagTaskCompletePercent = 1.0
         var maxTaskCompletePercentIndex = 0
-        while (stopCount > runningTasks.size() / 2) {
+        while (stopCount > testStopTaskNum) {
           var firstCompareIndex = true
           for (i <- 0 until runningTasksArray.length) {
             if (tasksCompletePercent(i) < flagTaskCompletePercent) {
@@ -284,19 +303,6 @@ class MURScheduler(
         }
 
         /**
-          * runningTasksArray = taskMURSample.getTasks()
-          * tasksMemoryConsumption = runningTasksArray.map(taskId => {
-          * val taskMemoryManger = runningTasksMemoryManage.get(taskId)
-          * taskMemoryManger.getMemoryConsumptionForThisTask
-          * })
-
-          * tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
-          * tasksMemoryUsageRate = runningTasksArray.map(taskMURSample.getMemoryUsageRate(_))
-          * tasksCompletePercent = runningTasksArray.map(taskMURSample.getCompletePercent(_))
-          * logInfo("memory usage: " + tasksMemoryUsage.mkString(","))
-          * logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
-          * logInfo("complete percent: " + tasksCompletePercent.mkString(","))
-
           * var flagTaskCompletePercent = 1.0
           * var maxTaskCompletePercentIndex = 0
           * // var satisfyTasks = (freeMemoryJVM / (usedMemoryJVM / runningTasks.size())).toInt
