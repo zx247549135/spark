@@ -258,7 +258,7 @@ class MURScheduler(
         ensureStop = true
 
       logInfo(s"Memory pressure must be optimized.")
-      if (ensureStop && runningTasks.size() > 0 && runningTasksArray.length > testStopTaskNum) {
+      if (ensureStop && runningTasks.size() > 0 && runningTasks.size() > testStopTaskNum) {
         logInfo("Ensure stop")
 
         runningTasksArray = taskMURSample.getTasks()
@@ -277,7 +277,7 @@ class MURScheduler(
         var stopCount = runningTasksArray.length
         var flagTaskCompletePercent = 1.0
         var maxTaskCompletePercentIndex = 0
-        while (stopCount > runningTasksArray.length / 2) {
+        while (stopCount > testStopTaskNum) {
           var firstCompareIndex = true
           for (i <- 0 until runningTasksArray.length) {
             if (tasksCompletePercent(i) < flagTaskCompletePercent) {
