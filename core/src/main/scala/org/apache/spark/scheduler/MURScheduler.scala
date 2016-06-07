@@ -208,137 +208,168 @@ class MURScheduler(
   var tasksMemoryUsage: Array[Long] = null
   var tasksMemoryUsageRate: Array[Double] = null
   var tasksCompletePercent: Array[Double] = null
-  def computeStopTask(): Unit ={
+  def computeStopTask(): Unit = {
     logInfo(s"Now Task: $stopIndex, $reStartIndex and running " + runningTasks.size())
     val memoryManager = env.memoryManager
 
     // only have stop tasks
-    if(runningTasks.size() == (stopIndex - reStartIndex)){
+    if (runningTasks.size() == (stopIndex - reStartIndex)) {
       removeStopTask()
       ensureStop = false
     }
 
     val usedMemoryJVM = ManagementFactory.getMemoryMXBean.getHeapMemoryUsage.getUsed
     // minor gc
-    if(usedMemoryJVM < lastTotalMemoryUsageJVM){
+    if (usedMemoryJVM < lastTotalMemoryUsageJVM) {
       perMemoryUsageJVM = usedMemoryJVM
     }
     // full gc
     var errorFullGC = 0L
-    if(perMemoryUsageJVM < lastPerMemoryUsageJVM){
-      errorFullGC = if(perMemoryUsageJVM > yellowMemoryUsage)
+    if (perMemoryUsageJVM < lastPerMemoryUsageJVM) {
+      errorFullGC = if (perMemoryUsageJVM > yellowMemoryUsage)
         perMemoryUsageJVM - yellowMemoryUsage
       else 0L
     }
-    if(perMemoryUsageJVM > lastPerMaxMemoryUsageJVM)
+    if (perMemoryUsageJVM > lastPerMaxMemoryUsageJVM)
       lastPerMaxMemoryUsageJVM = perMemoryUsageJVM
     lastTotalMemoryUsageJVM = usedMemoryJVM
 
     val freeMemoryJVM = totalMemory - perMemoryUsageJVM
-//      if(lastPerMaxMemoryUsageJVM == perMemoryUsageJVM)
-//        (totalMemory*0.66 - perMemoryUsageJVM).toLong
-//      else
-//        lastPerMaxMemoryUsageJVM - perMemoryUsageJVM
+    //      if(lastPerMaxMemoryUsageJVM == perMemoryUsageJVM)
+    //        (totalMemory*0.66 - perMemoryUsageJVM).toLong
+    //      else
+    //        lastPerMaxMemoryUsageJVM - perMemoryUsageJVM
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
     val freeMemory = memoryManager.maxStorageMemory - memoryManager.storageMemoryUsed
     logInfo(s"Memory usage.($usedMemoryJVM/$perMemoryUsageJVM/$usedMemory/$yellowMemoryUsage/$freeMemoryJVM/$freeMemory)")
 
-    if(!hasStopTask() && perMemoryUsageJVM > yellowMemoryUsage){
-      if(usedMemory > lastTotalMemoryUsage)
+    if (!hasStopTask() && perMemoryUsageJVM > yellowMemoryUsage) {
+      if (usedMemory > lastTotalMemoryUsage)
         ensureStop = true
-      else if(usedMemoryJVM > redMemoryUsage)
+      else if (usedMemoryJVM > redMemoryUsage)
         ensureStop = true
-      else if(usedMemoryJVM > yellowMemoryUsage * 2)
+      else if (usedMemoryJVM > yellowMemoryUsage * 2)
         ensureStop = true
 
       logInfo(s"Memory pressure must be optimized.")
-      if(ensureStop && runningTasks.size() > 0) {
+      if (ensureStop && runningTasks.size() > 0) {
         logInfo("Ensure stop")
 
-        runningTasksArray = taskMURSample.getTasks()
-        tasksMemoryConsumption = runningTasksArray.map(taskId => {
-          val taskMemoryManger = runningTasksMemoryManage.get(taskId)
-          taskMemoryManger.getMemoryConsumptionForThisTask
-        })
-
-        tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
-        tasksMemoryUsageRate = runningTasksArray.map(taskMURSample.getMemoryUsageRate(_))
-        tasksCompletePercent = runningTasksArray.map(taskMURSample.getCompletePercent(_))
-        logInfo("memory usage: " + tasksMemoryUsage.mkString(","))
-        logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
-        logInfo("complete percent: " + tasksCompletePercent.mkString(","))
-
+        var stopCount = 0
         var flagTaskCompletePercent = 1.0
         var maxTaskCompletePercentIndex = 0
-        // var satisfyTasks = (freeMemoryJVM / (usedMemoryJVM / runningTasks.size())).toInt
-        var satisfyTasks = freeMemoryJVM
-        if(errorFullGC != 0L)
-          satisfyTasks -= errorFullGC
         val minPercent = tasksCompletePercent.min
-        while (satisfyTasks > 0) {
+        while (stopCount > runningTasks.size() / 2) {
           var firstCompareIndex = true
           for (i <- 0 until runningTasksArray.length) {
-            if(tasksCompletePercent(i) < flagTaskCompletePercent){
-              if(firstCompareIndex) {
+            if (tasksCompletePercent(i) < flagTaskCompletePercent) {
+              if (firstCompareIndex) {
                 maxTaskCompletePercentIndex = i
                 firstCompareIndex = false
               }
-              if(tasksCompletePercent(i) >= tasksCompletePercent(maxTaskCompletePercentIndex))
+              if (tasksCompletePercent(i) >= tasksCompletePercent(maxTaskCompletePercentIndex))
                 maxTaskCompletePercentIndex = i
             }
           }
           if (runningTasks.size() != 0) {
-            satisfyTasks -= (tasksMemoryUsage(maxTaskCompletePercentIndex) * 2 *
-              (1 / tasksCompletePercent(maxTaskCompletePercentIndex) - 1)).toLong
+            stopCount -= 1
           }
           flagTaskCompletePercent = tasksCompletePercent(maxTaskCompletePercentIndex)
           maxTaskCompletePercentIndex = 0
-          if(flagTaskCompletePercent == 0.0)
-            satisfyTasks = 0
-          else if(flagTaskCompletePercent == minPercent && satisfyTasks > 0)
-            satisfyTasks = 0
         }
-        var stopCount = 0
+
         for (i <- 0 until runningTasksArray.length) {
           if (tasksCompletePercent(i) < flagTaskCompletePercent && !isResultTask.get(runningTasksArray(i))) {
             addStopTask(runningTasksArray(i))
-            stopCount += 1
           }
         }
-        if(stopCount >= 8)
-          conf.set("spark.murs.multiTasks", "0.8")
-        else if(stopCount <= 1)
-          conf.set("spark.murs.multiTasks", "" + multiTasks)
 
-        ensureStop = false
+        /**
+          * runningTasksArray = taskMURSample.getTasks()
+          * tasksMemoryConsumption = runningTasksArray.map(taskId => {
+          * val taskMemoryManger = runningTasksMemoryManage.get(taskId)
+          * taskMemoryManger.getMemoryConsumptionForThisTask
+          * })
+
+          * tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
+          * tasksMemoryUsageRate = runningTasksArray.map(taskMURSample.getMemoryUsageRate(_))
+          * tasksCompletePercent = runningTasksArray.map(taskMURSample.getCompletePercent(_))
+          * logInfo("memory usage: " + tasksMemoryUsage.mkString(","))
+          * logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
+          * logInfo("complete percent: " + tasksCompletePercent.mkString(","))
+
+          * var flagTaskCompletePercent = 1.0
+          * var maxTaskCompletePercentIndex = 0
+          * // var satisfyTasks = (freeMemoryJVM / (usedMemoryJVM / runningTasks.size())).toInt
+          * var satisfyTasks = freeMemoryJVM
+          * if(errorFullGC != 0L)
+          * satisfyTasks -= errorFullGC
+          * val minPercent = tasksCompletePercent.min
+          * while (satisfyTasks > 0) {
+          * var firstCompareIndex = true
+          * for (i <- 0 until runningTasksArray.length) {
+          * if(tasksCompletePercent(i) < flagTaskCompletePercent){
+          * if(firstCompareIndex) {
+          * maxTaskCompletePercentIndex = i
+          * firstCompareIndex = false
+          * }
+          * if(tasksCompletePercent(i) >= tasksCompletePercent(maxTaskCompletePercentIndex))
+          * maxTaskCompletePercentIndex = i
+          * }
+          * }
+          * if (runningTasks.size() != 0) {
+          * satisfyTasks -= (tasksMemoryUsage(maxTaskCompletePercentIndex) * 2 *
+          * (1 / tasksCompletePercent(maxTaskCompletePercentIndex) - 1)).toLong
+          * }
+          * flagTaskCompletePercent = tasksCompletePercent(maxTaskCompletePercentIndex)
+          * maxTaskCompletePercentIndex = 0
+          * if(flagTaskCompletePercent == 0.0)
+          * satisfyTasks = 0
+          * else if(flagTaskCompletePercent == minPercent && satisfyTasks > 0)
+          * satisfyTasks = 0
+          * }
+          * var stopCount = 0
+          * for (i <- 0 until runningTasksArray.length) {
+          * if (tasksCompletePercent(i) < flagTaskCompletePercent && !isResultTask.get(runningTasksArray(i))) {
+          * addStopTask(runningTasksArray(i))
+          * stopCount += 1
+          * }
+          * }
+          * if(stopCount >= 8)
+          * conf.set("spark.murs.multiTasks", "0.8")
+          * else if(stopCount <= 1)
+          * conf.set("spark.murs.multiTasks", "" + multiTasks)
+
+          * ensureStop = false
+          **/
       }
-    }else if(hasStopTask() && perMemoryUsageJVM < yellowMemoryUsage){
+    } else if (hasStopTask() && perMemoryUsageJVM < yellowMemoryUsage) {
       // full gc has worked but task still stop
       removeAllStopTasks()
-    }else if(hasStopTask() && perMemoryUsageJVM > redMemoryUsage){
+    } else if (hasStopTask() && perMemoryUsageJVM > redMemoryUsage) {
       // spill will occur
-//      val runningTasksArray = taskMURSample.getTasks()
-//      val taskMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
-//      if(taskMemoryUsage.sum != 0){
-//        for(i <- 0 until runningTasksArray.length-3){
-//          if(!shouldStop(runningTasksArray(i)))
-//            addStopTask(runningTasksArray(i))
-//        }
-//      }
+      //      val runningTasksArray = taskMURSample.getTasks()
+      //      val taskMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
+      //      if(taskMemoryUsage.sum != 0){
+      //        for(i <- 0 until runningTasksArray.length-3){
+      //          if(!shouldStop(runningTasksArray(i)))
+      //            addStopTask(runningTasksArray(i))
+      //        }
+      //      }
       val willTasksSpill = new Array[Boolean](runningTasksArray.length)
-      for(i <- 0 until runningTasksArray.length){
+      for (i <- 0 until runningTasksArray.length) {
         val needMemory = (tasksMemoryUsage(i) * 2 *
           (1 / tasksCompletePercent(i))).toLong
-        val willSpill = if(needMemory > tasksMemoryConsumption(i) * 0.8 && tasksCompletePercent(i) < 0.8)
+        val willSpill = if (needMemory > tasksMemoryConsumption(i) * 0.8 && tasksCompletePercent(i) < 0.8)
           true
         else false
         willTasksSpill.update(i, willSpill)
       }
       var freeMemoryBeforeSpill = freeMemory
-      for(i <- 0 until runningTasksArray.length){
-        if(!shouldStop(runningTasksArray(i)) && willTasksSpill(i)){
+      for (i <- 0 until runningTasksArray.length) {
+        if (!shouldStop(runningTasksArray(i)) && willTasksSpill(i)) {
           freeMemoryBeforeSpill -= 2 * tasksMemoryConsumption(i)
-          if(freeMemoryBeforeSpill < 0)
+          if (freeMemoryBeforeSpill < 0)
             addStopTask(runningTasksArray(i))
         }
       }
