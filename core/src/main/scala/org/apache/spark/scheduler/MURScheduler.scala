@@ -258,7 +258,6 @@ class MURScheduler(
         var stopCount = 0
         var flagTaskCompletePercent = 1.0
         var maxTaskCompletePercentIndex = 0
-        val minPercent = tasksCompletePercent.min
         while (stopCount > runningTasks.size() / 2) {
           var firstCompareIndex = true
           for (i <- 0 until runningTasksArray.length) {
