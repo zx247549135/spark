@@ -278,7 +278,9 @@ class MURScheduler(
         var stopCount = runningTasksArray.length
         var flagTaskCompletePercent = 1.0
         var maxTaskCompletePercentIndex = 0
-        while (stopCount > testStopTaskNum) {
+        var lastMemoryConsumption: Long = 0
+        var freeMemoryToConsumption = freeMemory
+        while (freeMemoryToConsumption > 0 && stopCount > testStopTaskNum) {
           var firstCompareIndex = true
           for (i <- 0 until runningTasksArray.length) {
             if (tasksCompletePercent(i) < flagTaskCompletePercent) {
@@ -290,17 +292,27 @@ class MURScheduler(
                 maxTaskCompletePercentIndex = i
             }
           }
-          if (runningTasks.size() != 0) {
-            stopCount -= 1
+          stopCount -= 1
+          val currentTaskMemoryConsumption = tasksMemoryConsumption(maxTaskCompletePercentIndex)
+          if (runningTasks.size() != 0 && currentTaskMemoryConsumption != 0) {
+            val currentMemoryConsumption = (currentTaskMemoryConsumption
+              * (1 / tasksCompletePercent(maxTaskCompletePercentIndex) - 1) * 5).toLong
+            lastMemoryConsumption = currentMemoryConsumption + currentTaskMemoryConsumption
+            freeMemoryToConsumption -= currentMemoryConsumption
+          } else if(currentTaskMemoryConsumption == 0){
+            freeMemoryToConsumption -= lastMemoryConsumption
           }
           flagTaskCompletePercent = tasksCompletePercent(maxTaskCompletePercentIndex)
           maxTaskCompletePercentIndex = 0
         }
 
         for (i <- 0 until runningTasksArray.length) {
-          if (tasksCompletePercent(i) < flagTaskCompletePercent && !isResultTask.get(runningTasksArray(i))) {
+          if (flagTaskCompletePercent != 0 && tasksCompletePercent(i) < flagTaskCompletePercent && !isResultTask.get(runningTasksArray(i))) {
+            addStopTask(runningTasksArray(i))
+          } else if(stopCount >= 0 && flagTaskCompletePercent == 0 && tasksCompletePercent(i) <= flagTaskCompletePercent){
             addStopTask(runningTasksArray(i))
           }
+          stopCount -= 1
         }
 
         /**
