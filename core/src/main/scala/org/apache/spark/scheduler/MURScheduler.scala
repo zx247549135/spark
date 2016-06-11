@@ -272,6 +272,7 @@ class MURScheduler(
         tasksCompletePercent = runningTasksArray.map(taskMURSample.getCompletePercent(_))
         logInfo("memory usage: " + tasksMemoryUsage.mkString(","))
         logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
+        logInfo("memory consumption: " + tasksMemoryConsumption.mkString(","))
         logInfo("complete percent: " + tasksCompletePercent.mkString(","))
 
         var stopCount = runningTasksArray.length
