@@ -280,6 +280,7 @@ class MURScheduler(
         var maxTaskCompletePercentIndex = 0
         var lastMemoryConsumption: Long = 0
         var freeMemoryToConsumption = freeMemory
+        testStopTaskNum = Math.min(testStopTaskNum, stopCount - 6)
         while (freeMemoryToConsumption > 0 && stopCount > testStopTaskNum) {
           var firstCompareIndex = true
           for (i <- 0 until runningTasksArray.length) {
