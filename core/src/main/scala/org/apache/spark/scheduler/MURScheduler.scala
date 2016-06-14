@@ -204,11 +204,9 @@ class MURScheduler(
   }
 
   private var testStopTaskNum: Int = 8
-  private var useTestStopTaskNum: Boolean = false
 
-  def setTestStopNum(stopNum: Int, use: Boolean): Unit ={
+  def setTestStopNum(stopNum: Int): Unit ={
     testStopTaskNum = stopNum
-    useTestStopTaskNum = use
   }
 
   var runningTasksArray: Array[Long] = null
@@ -282,7 +280,6 @@ class MURScheduler(
         var maxTaskCompletePercentIndex = 0
         var lastMemoryConsumption: Long = 0
         var freeMemoryToConsumption = freeMemory
-        testStopTaskNum = if(useTestStopTaskNum) testStopTaskNum else stopCount - 6
         while (freeMemoryToConsumption > 0 && stopCount > testStopTaskNum) {
           var firstCompareIndex = true
           for (i <- 0 until runningTasksArray.length) {
