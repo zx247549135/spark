@@ -247,7 +247,7 @@ class MURScheduler(
     //        lastPerMaxMemoryUsageJVM - perMemoryUsageJVM
     val usedMemory = memoryManager.executionMemoryUsed + memoryManager.storageMemoryUsed
     val freeMemory = memoryManager.maxStorageMemory - memoryManager.storageMemoryUsed
-    logInfo(s"Memory usage.($usedMemoryJVM/$perMemoryUsageJVM/$usedMemory/$yellowMemoryUsage/$freeMemoryJVM/$freeMemory)")
+    // logInfo(s"Memory usage.($usedMemoryJVM/$perMemoryUsageJVM/$usedMemory/$yellowMemoryUsage/$freeMemoryJVM/$freeMemory)")
 
     if (!hasStopTask() && perMemoryUsageJVM > yellowMemoryUsage) {
       if (usedMemory > lastTotalMemoryUsage)
@@ -270,10 +270,10 @@ class MURScheduler(
         tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
         tasksMemoryUsageRate = runningTasksArray.map(taskMURSample.getMemoryUsageRate(_))
         tasksCompletePercent = runningTasksArray.map(taskMURSample.getCompletePercent(_))
-        logInfo("memory usage: " + tasksMemoryUsage.mkString(","))
-        logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
-        logInfo("memory consumption: " + tasksMemoryConsumption.mkString(","))
-        logInfo("complete percent: " + tasksCompletePercent.mkString(","))
+        // logInfo("memory usage: " + tasksMemoryUsage.mkString(","))
+        // logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
+        // logInfo("memory consumption: " + tasksMemoryConsumption.mkString(","))
+        // logInfo("complete percent: " + tasksCompletePercent.mkString(","))
 
         var stopCount = runningTasksArray.length
         var flagTaskCompletePercent = 1.0
@@ -296,7 +296,7 @@ class MURScheduler(
           val currentTaskMemoryConsumption = tasksMemoryConsumption(maxTaskCompletePercentIndex)
           if (runningTasks.size() != 0 && currentTaskMemoryConsumption != 0) {
             val currentMemoryConsumption = (currentTaskMemoryConsumption
-              * (1 / tasksCompletePercent(maxTaskCompletePercentIndex) - 1) * 5).toLong
+              * (1 / tasksCompletePercent(maxTaskCompletePercentIndex) - 1) * 2).toLong
             lastMemoryConsumption = currentMemoryConsumption + currentTaskMemoryConsumption
             freeMemoryToConsumption -= currentMemoryConsumption
           } else if(currentTaskMemoryConsumption == 0){
