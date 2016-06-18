@@ -204,9 +204,11 @@ class MURScheduler(
   }
 
   private var testStopTaskNum: Int = 8
+  private var testStopTaskNumHadoopRDD: Int = 0
 
-  def setTestStopNum(stopNum: Int): Unit ={
+  def setTestStopNum(stopNum: Int, stopNumHadoop: Int): Unit ={
     testStopTaskNum = stopNum
+    testStopTaskNumHadoopRDD = stopNumHadoop
   }
 
   var runningTasksArray: Array[Long] = null
@@ -317,8 +319,24 @@ class MURScheduler(
           }
         }else{
           var testTmp = 1
-          while(testTmp <= testStopTaskNum){
-            addStopTask(runningTasksArray(testTmp))
+          var minMemoryUsage = tasksMemoryUsage.min
+          var stopIndexTmp = 0
+          for(i <- 0 until tasksMemoryUsage.length){
+            if(tasksMemoryUsage(i) == minMemoryUsage){
+              addStopTask(runningTasksArray(i))
+            }
+          }
+          while(testTmp <= testStopTaskNumHadoopRDD){
+            var tmp = Long.MaxValue
+            for(i <- 0 until tasksMemoryUsage.length){
+              val tmpCurrent = tasksMemoryUsage(i) - minMemoryUsage
+              if(tmpCurrent > 0 && tmpCurrent <= tmp){
+                tmp = tmpCurrent
+                stopIndexTmp = i
+              }
+            }
+            minMemoryUsage = tasksMemoryUsage(stopIndexTmp)
+            addStopTask(runningTasksArray(stopIndexTmp))
             testTmp += 1
           }
         }
