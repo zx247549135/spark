@@ -280,39 +280,48 @@ class MURScheduler(
         var maxTaskCompletePercentIndex = 0
         var lastMemoryConsumption: Long = 0
         var freeMemoryToConsumption = freeMemory
-        while (freeMemoryToConsumption > 0 && stopCount > testStopTaskNum) {
-          var firstCompareIndex = true
-          for (i <- 0 until runningTasksArray.length) {
-            if (tasksCompletePercent(i) < flagTaskCompletePercent) {
-              if (firstCompareIndex) {
-                maxTaskCompletePercentIndex = i
-                firstCompareIndex = false
+        if(tasksCompletePercent.sum != 0) {
+          while (freeMemoryToConsumption > 0 && stopCount > testStopTaskNum) {
+            var firstCompareIndex = true
+            for (i <- 0 until runningTasksArray.length) {
+              if (tasksCompletePercent(i) < flagTaskCompletePercent) {
+                if (firstCompareIndex) {
+                  maxTaskCompletePercentIndex = i
+                  firstCompareIndex = false
+                }
+                if (tasksCompletePercent(i) >= tasksCompletePercent(maxTaskCompletePercentIndex))
+                  maxTaskCompletePercentIndex = i
               }
-              if (tasksCompletePercent(i) >= tasksCompletePercent(maxTaskCompletePercentIndex))
-                maxTaskCompletePercentIndex = i
             }
+            stopCount -= 1
+            val currentTaskMemoryConsumption = tasksMemoryConsumption(maxTaskCompletePercentIndex)
+            if (runningTasks.size() != 0 && currentTaskMemoryConsumption != 0) {
+              val currentMemoryConsumption = (currentTaskMemoryConsumption
+                * (1 / tasksCompletePercent(maxTaskCompletePercentIndex) - 1) * 2).toLong
+              lastMemoryConsumption = currentMemoryConsumption + currentTaskMemoryConsumption
+              freeMemoryToConsumption -= currentMemoryConsumption
+            } else if (currentTaskMemoryConsumption == 0) {
+              freeMemoryToConsumption -= lastMemoryConsumption
+            }
+            flagTaskCompletePercent = tasksCompletePercent(maxTaskCompletePercentIndex)
+            maxTaskCompletePercentIndex = 0
           }
-          stopCount -= 1
-          val currentTaskMemoryConsumption = tasksMemoryConsumption(maxTaskCompletePercentIndex)
-          if (runningTasks.size() != 0 && currentTaskMemoryConsumption != 0) {
-            val currentMemoryConsumption = (currentTaskMemoryConsumption
-              * (1 / tasksCompletePercent(maxTaskCompletePercentIndex) - 1) * 2).toLong
-            lastMemoryConsumption = currentMemoryConsumption + currentTaskMemoryConsumption
-            freeMemoryToConsumption -= currentMemoryConsumption
-          } else if(currentTaskMemoryConsumption == 0){
-            freeMemoryToConsumption -= lastMemoryConsumption
-          }
-          flagTaskCompletePercent = tasksCompletePercent(maxTaskCompletePercentIndex)
-          maxTaskCompletePercentIndex = 0
-        }
 
-        for (i <- 0 until runningTasksArray.length) {
-          if (flagTaskCompletePercent != 0 && tasksCompletePercent(i) < flagTaskCompletePercent && !isResultTask.get(runningTasksArray(i))) {
-            addStopTask(runningTasksArray(i))
-          } else if(stopCount >= 0 && flagTaskCompletePercent == 0 && tasksCompletePercent(i) <= flagTaskCompletePercent){
-            addStopTask(runningTasksArray(i))
+          for (i <- 0 until runningTasksArray.length) {
+            if (flagTaskCompletePercent != 0 && tasksCompletePercent(i) < flagTaskCompletePercent && !isResultTask.get(runningTasksArray(i))) {
+              addStopTask(runningTasksArray(i))
+            } else if (stopCount >= 0 && flagTaskCompletePercent == 0 && tasksCompletePercent(i) <= flagTaskCompletePercent) {
+              addStopTask(runningTasksArray(i))
+            }
+            stopCount -= 1
           }
-          stopCount -= 1
+        }else{
+          var i = 0
+          while(stopCount > testStopTaskNum){
+            addStopTask(runningTasksArray(i))
+            i += 1
+            stopCount -= 1
+          }
         }
 
         /**
