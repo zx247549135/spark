@@ -316,11 +316,10 @@ class MURScheduler(
             stopCount -= 1
           }
         }else{
-          var i = 0
-          while(stopCount > testStopTaskNum){
-            addStopTask(runningTasksArray(i))
-            i += 1
-            stopCount -= 1
+          var testTmp = 1
+          while(testTmp <= testStopTaskNum){
+            addStopTask(runningTasksArray(testTmp))
+            testTmp += 1
           }
         }
 
