@@ -151,8 +151,10 @@ class MURScheduler(
 
   def addStopTask(taskId: Long): Unit = {
     logInfo(s"Add stop task: $taskId.")
-    mursStopTasks.put(stopIndex, taskId)
-    stopIndex += 1
+    if(!mursStopTasks.containsValue(taskId)) {
+      mursStopTasks.put(stopIndex, taskId)
+      stopIndex += 1
+    }
   }
 
   def removeStopTask(): Unit ={
