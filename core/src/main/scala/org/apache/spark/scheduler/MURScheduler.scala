@@ -320,26 +320,29 @@ class MURScheduler(
             stopCount -= 1
           }
         }else{
-          var testTmp = 1
-          var minMemoryUsage = tasksMemoryUsage.min
-          var stopIndexTmp = 0
-          for(i <- 0 until tasksMemoryUsage.length){
-            if(tasksMemoryUsage(i) == minMemoryUsage){
-              addStopTask(runningTasksArray(i))
-            }
-          }
-          while(testTmp <= testStopTaskNumHadoopRDD){
-            var tmp = Long.MaxValue
-            for(i <- 0 until tasksMemoryUsage.length){
-              val tmpCurrent = tasksMemoryUsage(i) - minMemoryUsage
-              if(tmpCurrent > 0 && tmpCurrent <= tmp){
-                tmp = tmpCurrent
-                stopIndexTmp = i
-              }
-            }
-            minMemoryUsage = tasksMemoryUsage(stopIndexTmp)
-            addStopTask(runningTasksArray(stopIndexTmp))
-            testTmp += 1
+//          var testTmp = 1
+//          var minMemoryUsage = tasksMemoryUsage.min
+//          var stopIndexTmp = 0
+//          for(i <- 0 until tasksMemoryUsage.length){
+//            if(tasksMemoryUsage(i) == minMemoryUsage){
+//              addStopTask(runningTasksArray(i))
+//            }
+//          }
+//          while(testTmp <= testStopTaskNumHadoopRDD){
+//            var tmp = Long.MaxValue
+//            for(i <- 0 until tasksMemoryUsage.length){
+//              val tmpCurrent = tasksMemoryUsage(i) - minMemoryUsage
+//              if(tmpCurrent > 0 && tmpCurrent <= tmp){
+//                tmp = tmpCurrent
+//                stopIndexTmp = i
+//              }
+//            }
+//            minMemoryUsage = tasksMemoryUsage(stopIndexTmp)
+//            addStopTask(runningTasksArray(stopIndexTmp))
+//            testTmp += 1
+//          }
+          for(i <- 0 until testStopTaskNumHadoopRDD){
+            addStopTask(runningTasksArray(i))
           }
         }
 
