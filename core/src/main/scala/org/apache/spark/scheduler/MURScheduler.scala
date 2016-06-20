@@ -347,7 +347,7 @@ class MURScheduler(
 //            testTmp += 1
 //          }
           for(i <- 0 until testStopTaskNumHadoopRDD){
-            if(!isResultTask.get(runningTasksArray(i)))
+            if(!isResultTask.get(runningTasksArray(i)) && !processResultTask)
               addStopTask(runningTasksArray(i))
             else if(isResultTask.get(runningTasksArray(i)) && processResultTask)
               addStopTask(runningTasksArray(i))
