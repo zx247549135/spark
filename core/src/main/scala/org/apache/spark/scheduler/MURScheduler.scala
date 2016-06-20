@@ -193,6 +193,7 @@ class MURScheduler(
   private var lastTotalMemoryUsage: Long = 0
   private var ensureStop = false
   private var redMemoryUsage: Long = 0
+  private var processResultTask = false
 
   def setResultTask(taskId: Long): Unit ={
     isResultTask.put(taskId, true)
@@ -211,6 +212,10 @@ class MURScheduler(
   def setTestStopNum(stopNum: Int, stopNumHadoop: Int): Unit ={
     testStopTaskNum = stopNum
     testStopTaskNumHadoopRDD = stopNumHadoop
+  }
+
+  def turnOnProcessResultTask(): Unit ={
+    processResultTask = true
   }
 
   var runningTasksArray: Array[Long] = null
@@ -312,8 +317,10 @@ class MURScheduler(
           }
 
           for (i <- 0 until runningTasksArray.length) {
-            if (flagTaskCompletePercent != 0 && tasksCompletePercent(i) < flagTaskCompletePercent && !isResultTask.get(runningTasksArray(i))) {
-              addStopTask(runningTasksArray(i))
+            if (flagTaskCompletePercent != 0 && tasksCompletePercent(i) < flagTaskCompletePercent ) {
+              val tmpIsResultTask = isResultTask.get(runningTasksArray(i))
+              if((tmpIsResultTask && processResultTask) || !tmpIsResultTask )
+                addStopTask(runningTasksArray(i))
             } else if (stopCount >= 0 && flagTaskCompletePercent == 0 && tasksCompletePercent(i) <= flagTaskCompletePercent) {
               addStopTask(runningTasksArray(i))
             }

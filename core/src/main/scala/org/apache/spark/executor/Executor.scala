@@ -542,6 +542,11 @@ private[spark] class Executor(
     val stopTaskNumTestHadoop = conf.getInt("spark.murs.stopTestHadoop", 4)
     murScheduler.setTestStopNum(stopTaskNumTest, stopTaskNumTestHadoop)
 
+    val processResultTask = conf.getBoolean("spark.murs.processResult", false)
+    if(processResultTask){
+      murScheduler.turnOnProcessResultTask()
+    }
+
     val intervalMs = conf.getTimeAsMs("spark.murs.samplingInterval", "200ms")
 
     // Wait a random interval so the sampling don't end up in sync
