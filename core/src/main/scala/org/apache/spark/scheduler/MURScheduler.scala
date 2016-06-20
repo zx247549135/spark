@@ -279,10 +279,10 @@ class MURScheduler(
         tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
         tasksMemoryUsageRate = runningTasksArray.map(taskMURSample.getMemoryUsageRate(_))
         tasksCompletePercent = runningTasksArray.map(taskMURSample.getCompletePercent(_))
-         logInfo("memory usage: " + tasksMemoryUsage.mkString(","))
-         logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
-         logInfo("memory consumption: " + tasksMemoryConsumption.mkString(","))
-         logInfo("complete percent: " + tasksCompletePercent.mkString(","))
+        // logInfo("memory usage: " + tasksMemoryUsage.mkString(","))
+        // logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
+        // logInfo("memory consumption: " + tasksMemoryConsumption.mkString(","))
+        // logInfo("complete percent: " + tasksCompletePercent.mkString(","))
 
         var stopCount = runningTasksArray.length
         var flagTaskCompletePercent = 1.0
@@ -317,10 +317,8 @@ class MURScheduler(
           }
 
           for (i <- 0 until runningTasksArray.length) {
-            if (flagTaskCompletePercent != 0 && tasksCompletePercent(i) < flagTaskCompletePercent ) {
-              val tmpIsResultTask = isResultTask.get(runningTasksArray(i))
-              if((tmpIsResultTask && processResultTask) || !tmpIsResultTask )
-                addStopTask(runningTasksArray(i))
+            if (flagTaskCompletePercent != 0 && tasksCompletePercent(i) < flagTaskCompletePercent && !isResultTask.get(runningTasksArray(i))) {
+              addStopTask(runningTasksArray(i))
             } else if (stopCount >= 0 && flagTaskCompletePercent == 0 && tasksCompletePercent(i) <= flagTaskCompletePercent) {
               addStopTask(runningTasksArray(i))
             }
@@ -350,6 +348,8 @@ class MURScheduler(
 //          }
           for(i <- 0 until testStopTaskNumHadoopRDD){
             if(!isResultTask.get(runningTasksArray(i)))
+              addStopTask(runningTasksArray(i))
+            else if(isResultTask.get(runningTasksArray(i)) && processResultTask)
               addStopTask(runningTasksArray(i))
           }
         }
