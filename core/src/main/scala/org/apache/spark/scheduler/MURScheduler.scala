@@ -423,6 +423,9 @@ class MURScheduler(
         willTasksSpill.update(i, willSpill)
       }
       var freeMemoryBeforeSpill = freeMemory
+      for(i <- 0 until mursStopTasks.size()){
+        freeMemoryBeforeSpill -= tasksMemoryConsumption(mursStopTasks.get(reStartIndex + i))
+      }
       for (i <- 0 until runningTasksArray.length) {
         if (!shouldStop(runningTasksArray(i)) && willTasksSpill(i)) {
           freeMemoryBeforeSpill -= 2 * tasksMemoryConsumption(i)
