@@ -306,7 +306,7 @@ class MURScheduler(
             val currentTaskMemoryConsumption = tasksMemoryConsumption(maxTaskCompletePercentIndex)
             if (runningTasks.size() != 0 && currentTaskMemoryConsumption != 0) {
               val currentMemoryConsumption = (currentTaskMemoryConsumption
-                * (1 / tasksCompletePercent(maxTaskCompletePercentIndex) - 1) * 2).toLong
+                * (1 / tasksCompletePercent(maxTaskCompletePercentIndex) - 1) * 5).toLong
               lastMemoryConsumption = currentMemoryConsumption + currentTaskMemoryConsumption
               freeMemoryToConsumption -= currentMemoryConsumption
             } else if (currentTaskMemoryConsumption == 0) {
