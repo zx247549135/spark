@@ -247,6 +247,7 @@ class HadoopRDD[K, V](
 //      }
       // ------MURS----
 
+      context.taskMURS().setHadoopTask(context.attemptId())
       var reader: RecordReader[K, V] = null
       val inputFormat = getInputFormat(jobConf)
       HadoopRDD.addLocalConfiguration(new SimpleDateFormat("yyyyMMddHHmm").format(createTime),

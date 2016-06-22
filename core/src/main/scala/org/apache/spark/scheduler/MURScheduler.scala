@@ -33,6 +33,7 @@ class MURScheduler(
   val taskMURSample = new MURSchedulerSample
 
   private val isResultTask = new ConcurrentHashMap[Long, Boolean]()
+  private val isHadoopTask = new ConcurrentHashMap[Long, Boolean]()
 
   private val multiTasks = conf.getDouble("spark.murs.multiTasks", 1.0)
 
@@ -72,6 +73,7 @@ class MURScheduler(
     runningTasksSampleFlag.put(taskId, false)
     taskMURSample.registerTask(taskId)
     isResultTask.put(taskId, false)
+    isHadoopTask.put(taskId, false)
   }
 
   def removeFinishedTask(taskId: Long): Unit = {
@@ -81,7 +83,7 @@ class MURScheduler(
     runningTasksSampleFlag.remove(taskId)
     taskMURSample.removeFinishedTask(taskId)
     isResultTask.remove(taskId)
-
+    isHadoopTask.remove(taskId)
   }
 
   /**
@@ -199,6 +201,10 @@ class MURScheduler(
     isResultTask.put(taskId, true)
   }
 
+  def setHadoopTask(taskId: Long): Unit = {
+    isHadoopTask.put(taskId, true)
+  }
+
   def updateMemroyLine(total: Long, yellowLine: Long): Unit = {
     totalMemory = total
     lastTotalMemoryUsageJVM = total
@@ -289,7 +295,7 @@ class MURScheduler(
         var maxTaskCompletePercentIndex = 0
         var lastMemoryConsumption: Long = 0
         var freeMemoryToConsumption = freeMemory
-        //if(tasksCompletePercent.sum != 0) {
+        if(isHadoopTask.values().contains(false) && isResultTask.values.contains(false)) {
           while (freeMemoryToConsumption > 0 && stopCount > testStopTaskNum) {
             var firstCompareIndex = true
             for (i <- 0 until runningTasksArray.length) {
@@ -324,7 +330,7 @@ class MURScheduler(
             }
             stopCount -= 1
           }
-        //}else{
+        }else{
 //          var testTmp = 1
 //          var minMemoryUsage = tasksMemoryUsage.min
 //          var stopIndexTmp = 0
@@ -346,13 +352,13 @@ class MURScheduler(
 //            addStopTask(runningTasksArray(stopIndexTmp))
 //            testTmp += 1
 //          }
-//          for(i <- 0 until testStopTaskNumHadoopRDD){
-//            if(!isResultTask.get(runningTasksArray(i)) && !processResultTask)
-//              addStopTask(runningTasksArray(i))
-//            else if(isResultTask.get(runningTasksArray(i)) && processResultTask)
-//              addStopTask(runningTasksArray(i))
-//          }
-        //}
+          for(i <- 0 until testStopTaskNumHadoopRDD){
+            if(!isResultTask.get(runningTasksArray(i)) && !processResultTask)
+              addStopTask(runningTasksArray(i))
+            else if(isResultTask.get(runningTasksArray(i)) && processResultTask)
+              addStopTask(runningTasksArray(i))
+          }
+        }
 
         /**
           * var flagTaskCompletePercent = 1.0
