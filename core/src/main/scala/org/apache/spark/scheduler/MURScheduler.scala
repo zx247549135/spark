@@ -413,23 +413,23 @@ class MURScheduler(
       //            addStopTask(runningTasksArray(i))
       //        }
       //      }
-      val willTasksSpill = new Array[Boolean](runningTasksArray.length)
-      for (i <- 0 until runningTasksArray.length) {
-        val needMemory = (tasksMemoryUsage(i) * 2 *
-          (1 / tasksCompletePercent(i))).toLong
-        val willSpill = if (needMemory > tasksMemoryConsumption(i) * 0.8 && tasksCompletePercent(i) < 0.8)
-          true
-        else false
-        willTasksSpill.update(i, willSpill)
-      }
-      var freeMemoryBeforeSpill = freeMemory.toLong
-      for (i <- 0 until runningTasksArray.length) {
-        if (!shouldStop(runningTasksArray(i)) && willTasksSpill(i)) {
-          freeMemoryBeforeSpill -= 2 * tasksMemoryConsumption(i)
-          if (freeMemoryBeforeSpill < 0)
-            addStopTask(runningTasksArray(i))
-        }
-      }
+//      val willTasksSpill = new Array[Boolean](runningTasksArray.length)
+//      for (i <- 0 until runningTasksArray.length) {
+//        val needMemory = (tasksMemoryUsage(i) * 2 *
+//          (1 / tasksCompletePercent(i))).toLong
+//        val willSpill = if (needMemory > tasksMemoryConsumption(i) * 0.8 && tasksCompletePercent(i) < 0.8)
+//          true
+//        else false
+//        willTasksSpill.update(i, willSpill)
+//      }
+//      var freeMemoryBeforeSpill = freeMemory.toLong
+//      for (i <- 0 until runningTasksArray.length) {
+//        if (!shouldStop(runningTasksArray(i)) && willTasksSpill(i)) {
+//          freeMemoryBeforeSpill -= 2 * tasksMemoryConsumption(i)
+//          if (freeMemoryBeforeSpill < 0)
+//            addStopTask(runningTasksArray(i))
+//        }
+//      }
     }
     lastTotalMemoryUsage = usedMemory
     lastPerMemoryUsageJVM = perMemoryUsageJVM
