@@ -214,10 +214,12 @@ class MURScheduler(
 
   private var testStopTaskNum: Int = 8
   private var testStopTaskNumHadoopRDD: Int = 0
+  private var estimateMul: Int = 5
 
   def setTestStopNum(stopNum: Int, stopNumHadoop: Int): Unit ={
     testStopTaskNum = stopNum
     testStopTaskNumHadoopRDD = stopNumHadoop
+    estimateMul = conf.getInt("spark.murs.estimate", 5)
   }
 
   def turnOnProcessResultTask(): Unit ={
@@ -312,7 +314,7 @@ class MURScheduler(
             val currentTaskMemoryConsumption = tasksMemoryConsumption(maxTaskCompletePercentIndex)
             if (runningTasks.size() != 0 && currentTaskMemoryConsumption != 0) {
               val currentMemoryConsumption = (currentTaskMemoryConsumption
-                * (1 / tasksCompletePercent(maxTaskCompletePercentIndex) - 1) * 5).toLong
+                * (1 / tasksCompletePercent(maxTaskCompletePercentIndex) - 1) * estimateMul).toLong
               lastMemoryConsumption = currentMemoryConsumption + currentTaskMemoryConsumption
               freeMemoryToConsumption -= currentMemoryConsumption
             } else if (currentTaskMemoryConsumption == 0) {
