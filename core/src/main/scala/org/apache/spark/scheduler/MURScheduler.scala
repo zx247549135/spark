@@ -66,6 +66,11 @@ class MURScheduler(
       s"memory usage $shuffleMemoryUsage/$cacheMemoryUsage.")
   }
 
+  /**
+   * Register a task in MURS.
+   * @param taskId
+   * @param taskMemoryManager
+   */
   def registerTask(taskId: Long, taskMemoryManager: TaskMemoryManager): Unit = {
     runningTasks.put(taskId, 0)
     runningTasksMemoryManage.put(taskId, taskMemoryManager)
@@ -74,6 +79,10 @@ class MURScheduler(
     isResultTask.put(taskId, false)
   }
 
+  /**
+   * When a task is finished, remove it from MURS.
+   * @param taskId
+   */
   def removeFinishedTask(taskId: Long): Unit = {
     finishedTasks.append(taskId)
     removeStopTask()
@@ -146,7 +155,6 @@ class MURScheduler(
 
   /**
    * Scheduler Implementation
-   *
    */
 
   def addStopTask(taskId: Long): Unit = {
@@ -196,7 +204,12 @@ class MURScheduler(
     isResultTask.put(taskId, true)
   }
 
-  def updateMemroyLine(total: Long, yellowLine: Long): Unit = {
+  /**
+   * The line of memory can be set by users. The red value cannot be set by users.
+   * @param total total memory
+   * @param yellowLine yellow line can be set by the configuration
+   */
+  def updateMemoryLine(total: Long, yellowLine: Long): Unit = {
     totalMemory = total
     lastTotalMemoryUsageJVM = total
     yellowMemoryUsage = yellowLine
@@ -208,6 +221,12 @@ class MURScheduler(
   var tasksMemoryUsage: Array[Long] = null
   var tasksMemoryUsageRate: Array[Double] = null
   var tasksCompletePercent: Array[Double] = null
+
+  /**
+   * Developing API :: computeStopTask()
+   * This method is called within each schedule. It computes the
+   * tasks that should be stopped.
+   */
   def computeStopTask(): Unit ={
     logInfo(s"Now Task: $stopIndex, $reStartIndex and running " + runningTasks.size())
     val memoryManager = env.memoryManager
@@ -264,9 +283,9 @@ class MURScheduler(
         tasksMemoryUsage = runningTasksArray.map(taskMURSample.getMemoryUsage(_))
         tasksMemoryUsageRate = runningTasksArray.map(taskMURSample.getMemoryUsageRate(_))
         tasksCompletePercent = runningTasksArray.map(taskMURSample.getCompletePercent(_))
-        logInfo("memory usage: " + tasksMemoryUsage.mkString(","))
-        logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
-        logInfo("complete percent: " + tasksCompletePercent.mkString(","))
+        //logInfo("memory usage: " + tasksMemoryUsage.mkString(","))
+        //logInfo("memory usage rate: " + tasksMemoryUsageRate.mkString(","))
+        //logInfo("complete percent: " + tasksCompletePercent.mkString(","))
 
         var flagTaskCompletePercent = 1.0
         var maxTaskCompletePercentIndex = 0

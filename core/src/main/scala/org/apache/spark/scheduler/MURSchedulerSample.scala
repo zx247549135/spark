@@ -9,6 +9,8 @@ import scala.collection.mutable.ArrayBuffer
 
 /**
  * Created by zx on 16-1-20.
+ * The sampler is working to update or getting message from memory manager,
+ * task manager or JVM.
  */
 class MURSchedulerSample extends Serializable with Logging{
 
@@ -104,6 +106,12 @@ class MURSchedulerSample extends Serializable with Logging{
     currentTasksMemoryUseType.replace(taskId, 1)
   }
 
+  /**
+   * This method limit the length of appending sampled values.
+   * @param taskId task id
+   * @param mapWithBuffer sampled values
+   * @param value appending value
+   */
   def appendValue(taskId: Long, mapWithBuffer: ConcurrentHashMap[Long, ArrayBuffer[Long]], value: Long): Unit = {
     if(mapWithBuffer.containsKey(taskId)) {
       val valueBuffer = mapWithBuffer.get(taskId)
@@ -256,6 +264,14 @@ class MURSchedulerSample extends Serializable with Logging{
     doingShuffleWrite.put(taskId, true)
   }
 
+  /**
+   * Developing API:: getCompletePercent
+   * This method can get the complete percent of given task. However, when we
+   * attempt to get the number of initial records from HDFS, it's not accessible now.
+   * Thus, we need develop this API any more. And we set a default value (5400000) here.
+   * @param taskId the taskID
+   * @return complete percent
+   */
   def getCompletePercent(taskId: Long): Double = {
     if(doingShuffleWrite.contains(taskId)){
       doingShuffleWrite.remove(taskId)

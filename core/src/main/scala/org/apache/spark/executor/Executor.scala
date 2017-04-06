@@ -536,7 +536,7 @@ private[spark] class Executor(
     val totalMemory = ManagementFactory.getMemoryMXBean.getHeapMemoryUsage.getMax
     val yellowLine = conf.getDouble("spark.murs.yellow", 0.4)
     val yellowMemoryUsage = (totalMemory * 0.66 * yellowLine).toLong
-    murScheduler.updateMemroyLine(totalMemory.toLong, yellowMemoryUsage)
+    murScheduler.updateMemoryLine(totalMemory.toLong, yellowMemoryUsage)
 
     val intervalMs = conf.getTimeAsMs("spark.murs.samplingInterval", "200ms")
 
